@@ -1,0 +1,55 @@
+QDialog#LoginDialog, #RegisterDialog{
+    background-color: rgb(240, 240, 240),
+}
+
+QLabel{
+    color: black;
+}
+
+#err_tip[state='normal']{
+    color: green;
+}
+
+#err_tip[state='error']{
+    color: red;
+}
+
+#login_tip[state='normal']{
+    color: green;
+}
+
+#login_tip[state='error']{
+    color: red;
+}
+
+#passwd_visible[state='unvisible']{
+   border-image: url(:/resources/eye-close.png);
+}
+#passwd_visible[state='unvisible_hover']{
+   border-image: url(:/resources/eye-hover-close.png);
+}
+#passwd_visible[state='visible']{
+   border-image: url(:/resources/eye.png);
+}
+#passwd_visible[state='visible_hover']{
+   border-image: url(:/resources/eye-hover.png);
+}
+#confirm_visible[state='unvisible']{
+   border-image: url(:/resources/eye-close.png);
+}
+#confirm_visible[state='unvisible_hover']{
+   border-image: url(:/resources/eye-hover-close.png);
+}
+#confirm_visible[state='visible']{
+   border-image: url(:/resources/eye.png);
+}
+#confirm_visible[state='visible_hover']{
+   border-image: url(:/resources/eye-hover-close.png);
+}
+
+#forget_label[state='normal']{
+    color: black;
+}
+#forget_label[state='hover']{
+    color: blue;
+}

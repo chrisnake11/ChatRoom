@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/images">
+        <file>resources/wechat.png</file>
+    </qresource>
+    <qresource prefix="/">
+        <file>resources/avatar.png</file>
+        <file>styles/stylesheet.qss</file>
+        <file>resources/eye.png</file>
+        <file>resources/eye-close.png</file>
+        <file>resources/eye-hover.png</file>
+        <file>resources/eye-hover-close.png</file>
+    </qresource>
+</RCC>

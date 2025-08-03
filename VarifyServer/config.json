@@ -1,0 +1,11 @@
+{
+    "email": {
+      "user": "2500517199@qq.com",
+      "pass": "ituzffvxcwgiecgi"
+    },
+    "redis" :{
+      "host": "127.0.0.1",
+      "port": 6379,
+      "passwd": "12345"
+    }
+}
