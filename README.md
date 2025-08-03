@@ -1,6 +1,9 @@
 # ChatRoom - 多服务器架构聊天室项目
 
-这是一个基于C++、Qt和Node.js的分布式聊天室系统，采用微服务架构设计。
+## 原始项目地址：https://www.bilibili.com/video/BV1k2421K7ZB/
+## 作者博客：https://llfc.club/
+
+自学用。这是一个基于C++、Qt和Node.js的分布式聊天室系统。
 
 ## 项目架构
 
