@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <grpcpp/grpcpp.h>
 #include "message.grpc.pb.h"
 #include <unordered_map>
@@ -11,7 +11,7 @@ using message::GetChatServerReq;
 using message::GetChatServerRsp;
 using message::StatusService;
 
-// ChatServerÀà£¬ÓÃµØÖ·ºÍ¶Ë¿Ú±íÊ¾
+// ChatServerç±»ï¼Œç”¨åœ°å€å’Œç«¯å£è¡¨ç¤º
 class ChatServer {
 public:
 	ChatServer() : host(""), port(""), name(""), con_count(0) {}
@@ -39,7 +39,7 @@ class StatusServiceImpl final : public StatusService::Service
 public:
 	StatusServiceImpl();
 
-	// »ñÈ¡ÁÄÌì·şÎñÆ÷ĞÅÏ¢£¬Ìí¼Óµ½±¾µØmapÖĞ
+	// è·å–uidå¯¹åº”çš„èŠå¤©æœåŠ¡å™¨
 	Status GetChatServer(ServerContext* context, const GetChatServerReq* request,
 		GetChatServerRsp* response) override;
 
@@ -48,12 +48,10 @@ public:
 
 private:
 	void insertToken(int uid, const std::string& token);
-
-	// ´Ó±¾µØmapÖĞ»ñÈ¡ÁÄÌì·şÎñÆ÷ĞÅÏ¢
+	// è·å–è¿æ¥æ•°æœ€å°çš„æœåŠ¡å™¨
 	ChatServer getChatServer();
 
-	std::unordered_map<int, std::string> _uid_to_token_map; // ´æ´¢ÓÃ»§IDµ½tokenµÄÓ³Éä
-	std::mutex _token_mtx; // ÓÃÓÚ±£»¤_token_to_server_mapµÄ»¥³âËø
-	std::unordered_map<std::string, ChatServer> _token_to_server_map;
+	// æœåŠ¡å™¨åˆ—è¡¨<æœåŠ¡å™¨åç§°, æœåŠ¡å™¨ä¿¡æ¯>
+	std::unordered_map<std::string, ChatServer> _servers;
 	std::mutex _server_mtx;
 };

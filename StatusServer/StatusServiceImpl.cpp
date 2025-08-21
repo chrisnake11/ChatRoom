@@ -1,13 +1,13 @@
-#include "StatusServiceImpl.h"
+﻿#include "StatusServiceImpl.h"
 #include "ConfigManager.h"
 #include "const.h"
-//#include "RedisManager.h"
+#include "RedisManager.h"
 
 std::string generate_unique_string() {
-	// ����UUID����
+	// 创建UUID对象
 	boost::uuids::uuid uuid = boost::uuids::random_generator()();
 
-	// ��UUIDת��Ϊ�ַ���
+	// 将UUID转换为字符串
 	std::string unique_string = to_string(uuid);
 
 	return unique_string;
@@ -16,12 +16,14 @@ std::string generate_unique_string() {
 Status StatusServiceImpl::GetChatServer(ServerContext* context, const GetChatServerReq* request, GetChatServerRsp* reply)
 {
 	std::string prefix("status server has receivec... ");
+	// 获取连接数最小的服务器
 	const auto& server = getChatServer();
+	// 返回服务器地址和端口
 	reply->set_host(server.host);
 	reply->set_port(server.port);
 	reply->set_error(ErrorCodes::SUCCESS);
 	reply->set_token(generate_unique_string());
-	// ��tokenд��map��
+	// 将token写入Redis
 	insertToken(request->uid(), reply->token());
 	return Status::OK;
 }
@@ -29,23 +31,26 @@ Status StatusServiceImpl::GetChatServer(ServerContext* context, const GetChatSer
 Status StatusServiceImpl::Login(ServerContext* context, const message::LoginReq* request, message::LoginRsp* response)
 {
 	/*
-		�ڱ���map�в����û�ID��token�Ƿ�ƥ��
+		在本地map中查找用户ID和token是否匹配
 	*/
 	auto uid = request->uid();
 	auto token = request->token();
-	std::lock_guard<std::mutex> lock(_server_mtx);
-	auto iter = _uid_to_token_map.find(uid);
-	// uidû�ҵ�
-	if(iter == _uid_to_token_map.end()) {
+
+	// redis查询uid对应的token, key-value
+	std::string token_str = "";
+	bool success = RedisManager::getInstance()->Get(USER_TOKEN + std::to_string(uid), token_str);
+	// uid不存在，查询失败
+	if (!success) {
 		response->set_error(ErrorCodes::ERROR_UID_INVALID);
 		return Status::OK;
 	}
-	// uid�ҵ�������token��ƥ��
-	if (iter->second != token) {
+	// 比较登录的token和redis的token是否匹配
+	if (token_str != token) {
 		response->set_error(ErrorCodes::ERROR_TOKEN_INVALID);
 		return Status::OK;
 	}
 
+	// redis查询成功，token匹配
 	response->set_error(ErrorCodes::SUCCESS);
 	response->set_uid(uid);
 	response->set_token(token);
@@ -54,24 +59,64 @@ Status StatusServiceImpl::Login(ServerContext* context, const message::LoginReq*
 
 void StatusServiceImpl::insertToken(int uid, const std::string& token)
 {
-	// ����token������map��
-	std::lock_guard<std::mutex> lock(_token_mtx);
-	_uid_to_token_map[uid] = token;
+	std::string uid_str = std::to_string(uid);
+	std::string key = USER_TOKEN + uid_str;
+	// 写入redis，key-value
+	RedisManager::getInstance()->Set(key, token);
 }
 
 
 ChatServer StatusServiceImpl::getChatServer()
 {
 	std::lock_guard<std::mutex> lock(_server_mtx);
-	if (_token_to_server_map.empty()) {
-		std::cerr << "No chat server available!" << std::endl;
-		return ChatServer(); // ����һ���յ�ChatServer����
+	if (_servers.empty()) {
+		std::cout << "In status server, server list is empty" << std::endl;
+		// 服务器列表为空，返回默认服务器
+		ChatServer default_server;
+		default_server.con_count = INT_MAX;
+		return default_server;
 	}
-	auto min_server = _token_to_server_map.begin()->second;
-	for(const auto& server : _token_to_server_map) {
+
+	auto min_server = _servers.begin()->second;
+	// redis查询第一个的连接数
+	auto count_str = RedisManager::getInstance()->HGet(LOGIN_COUNT, min_server.name);
+	if (count_str.empty()) {
+		// redis查询失败，设置为最大值
+		min_server.con_count = INT_MAX;
+	}
+	else {
+		min_server.con_count = std::stoi(count_str);
+	}
+
+	// 找到最小的元素
+	for(auto& server : _servers) {
+		// 跳过自己
+		if(server.second.name == min_server.name) {
+			continue;
+		}
+		// redis查询连接数
+		auto count_str = RedisManager::getInstance()->HGet(LOGIN_COUNT, server.second.name);
+		if(count_str.empty()) {
+			server.second.con_count = INT_MAX;
+		}
+		else {
+			server.second.con_count = std::stoi(count_str);
+		}
+
+		// 连接数更小，更新
 		if(server.second.con_count < min_server.con_count) {
 			min_server = server.second;
 		}
+	}
+	
+	// 假设不会所有服务器都满了。
+	// 如果连接数是最大值，说明是第一次登录，设置连接数为1
+	if(min_server.con_count == INT_MAX) {
+		std::cout << "all servers are full connected" << std::endl;
+	}
+	// 否则，更新连接数加1
+	else{
+		RedisManager::getInstance()->HSet(LOGIN_COUNT, min_server.name, std::to_string(min_server.con_count + 1));
 	}
 	return min_server;
 }
@@ -79,17 +124,28 @@ ChatServer StatusServiceImpl::getChatServer()
 StatusServiceImpl::StatusServiceImpl()
 {
 	/*
-		��ȡ�����ļ��е���������������ã������ӵ�_token_to_server_map��
+		读取配置文件中的聊天服务器的配置，并添加到_servers中
 	*/
 	auto& cfg = ConfigManager::GetInstance();
 
-	std::vector<std::string> server_names;
+	auto server_list = cfg["ChatServers"]["Name"];
+	std::cout << "server list: " << server_list << std::endl;
 
-	ChatServer server;
-	server.port = cfg["ChatServer1"]["Port"];
-	server.host = cfg["ChatServer1"]["Host"];
-	server.name = cfg["ChatServer1"]["Name"];
-	server.con_count = 0;
-	_token_to_server_map[server.name] = server;
+	// 按逗号分割字符串
+	std::stringstream ss(server_list);
+	std::vector<std::string> words;
+	std::string word;
+	while (std::getline(ss, word, ',')) {
+		words.push_back(word);
+	}
+	for (auto& word : words) {
+		ChatServer server;
+		server.name = cfg[word]["Name"];
+		server.host = cfg[word]["Host"];
+		server.port = cfg[word]["Port"];
+		_servers[server.name] = server;
+		std::cout << "parse configuration. server name: " << server.name << ", host: " << server.host << ", port: " << server.port << std::endl;
+	}
+
 
 }

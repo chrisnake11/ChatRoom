@@ -10,25 +10,25 @@
 #include "LogicSystem.h"
 
 /*
-CSession ÀàÓÃÓÚ±íÊ¾Ò»¸öÍøÂç»á»°£¬·â×°ÁËÓë¿Í»§¶ËµÄÁ¬½Ó¡¢Êı¾İ½ÓÊÕºÍ·¢ËÍµÈ¹¦ÄÜ¡£
+CSession ç±»ç”¨äºè¡¨ç¤ºä¸€ä¸ªç½‘ç»œä¼šè¯ï¼Œå°è£…äº†ä¸å®¢æˆ·ç«¯çš„è¿æ¥ã€æ•°æ®æ¥æ”¶å’Œå‘é€ç­‰åŠŸèƒ½ã€‚
 
-¹¦ÄÜ½âÎö£º
-1. ¹¹Ôìº¯ÊıºÍÎö¹¹º¯Êı£º
-   - CSession()£º³õÊ¼»¯»á»°£¬ÉèÖÃÄ¬ÈÏÖµ¡£
-   - ~CSession()£ºÇåÀí×ÊÔ´£¬¹Ø±ÕÁ¬½Ó¡£
-2. »ñÈ¡Ì×½Ó×ÖºÍUUID£º
-   - getSocket()£º·µ»ØÓë¿Í»§¶ËµÄÌ×½Ó×ÖÒıÓÃ¡£
-   - getUuid()£º·µ»Ø»á»°µÄÎ¨Ò»±êÊ¶·û¡£
-3. »á»°¹ÜÀí£º
-   - start()£º¿ªÊ¼»á»°£¬Í¨³£ÓÃÓÚÆô¶¯Òì²½²Ù×÷¡£
-   - close()£º¹Ø±Õ»á»°£¬ÊÍ·Å×ÊÔ´¡£
-4. Òì²½²Ù×÷£º
-   - asyncReadHead()£ºÒì²½¶ÁÈ¡Êı¾İ°üÍ·²¿£¬Ö¸¶¨×Ü³¤¶È¡£
-   - asyncReadBody()£ºÒì²½¶ÁÈ¡Êı¾İ°üÌå£¬Ö¸¶¨×Ü³¤¶È¡£
-   - send()£º·¢ËÍÊı¾İµ½¿Í»§¶Ë¡£
-5. Êı¾İ´¦Àí£º
-   - asyncReadFull()£ºÒì²½¶ÁÈ¡ÍêÕûÊı¾İ°ü¡£
-   - asyncReadLen()£ºÒì²½¶ÁÈ¡Ö¸¶¨³¤¶ÈµÄÊı¾İ¡£
+åŠŸèƒ½è§£æï¼š
+1. æ„é€ å‡½æ•°å’Œææ„å‡½æ•°ï¼š
+   - CSession()ï¼šåˆå§‹åŒ–ä¼šè¯ï¼Œè®¾ç½®é»˜è®¤å€¼ã€‚
+   - ~CSession()ï¼šæ¸…ç†èµ„æºï¼Œå…³é—­è¿æ¥ã€‚
+2. è·å–å¥—æ¥å­—å’ŒUUIDï¼š
+   - getSocket()ï¼šè¿”å›ä¸å®¢æˆ·ç«¯çš„å¥—æ¥å­—å¼•ç”¨ã€‚
+   - getUuid()ï¼šè¿”å›ä¼šè¯çš„å”¯ä¸€æ ‡è¯†ç¬¦ã€‚
+3. ä¼šè¯ç®¡ç†ï¼š
+   - start()ï¼šå¼€å§‹ä¼šè¯ï¼Œé€šå¸¸ç”¨äºå¯åŠ¨å¼‚æ­¥æ“ä½œã€‚
+   - close()ï¼šå…³é—­ä¼šè¯ï¼Œé‡Šæ”¾èµ„æºã€‚
+4. å¼‚æ­¥æ“ä½œï¼š
+   - asyncReadHead()ï¼šå¼‚æ­¥è¯»å–æ•°æ®åŒ…å¤´éƒ¨ï¼ŒæŒ‡å®šæ€»é•¿åº¦ã€‚
+   - asyncReadBody()ï¼šå¼‚æ­¥è¯»å–æ•°æ®åŒ…ä½“ï¼ŒæŒ‡å®šæ€»é•¿åº¦ã€‚
+   - send()ï¼šå‘é€æ•°æ®åˆ°å®¢æˆ·ç«¯ã€‚
+5. æ•°æ®å¤„ç†ï¼š
+   - asyncReadFull()ï¼šå¼‚æ­¥è¯»å–å®Œæ•´æ•°æ®åŒ…ã€‚
+   - asyncReadLen()ï¼šå¼‚æ­¥è¯»å–æŒ‡å®šé•¿åº¦çš„æ•°æ®ã€‚
 
 */
 
@@ -37,26 +37,28 @@ public:
 	CSession(boost::asio::io_context& io_context, CServer* server);
 	~CSession();
 	boost::asio::ip::tcp::socket& getSocket();
-	std::string& getUuid();
+	std::string getSessionID() const { return _session_id; }
+	int getUserID() const { return _user_id; }
+	void setUserID(int id) { _user_id = id; }
 	void start();
 	void close();
-	// Òì²½½âÎöÍ·²¿
+	// å¼‚æ­¥è§£æå¤´éƒ¨
 	void asyncReadHead(int total_length);
-	// ½âÎö²¢´¦ÀíÊı¾İ°üÌå
+	// è§£æå¹¶å¤„ç†æ•°æ®åŒ…ä½“
 	void asyncReadBody(int total_length);
 	// send data
 	void send(const char* msg, short max_length, short msg_id);
 	void send(const std::string& msg, short msg_id);
-	// Ö§³ÖÓÒÖµÒıÓÃ£¬ÁÙÊ±×Ö·û´®¶ÔÏó´«µİ¡£
+	// æ”¯æŒå³å€¼å¼•ç”¨ï¼Œä¸´æ—¶å­—ç¬¦ä¸²å¯¹è±¡ä¼ é€’ã€‚
 	void send(std::string&& msg, short msg_id);
 
 private:
-	// ½âÎöÍêÕûµÄÊı¾İ°ü(head + body)
-	// max_length±íÊ¾Í·²¿³¤¶È
-	// handlerÎª»Øµ÷º¯Êı
+	// è§£æå®Œæ•´çš„æ•°æ®åŒ…(head + body)
+	// max_lengthè¡¨ç¤ºå¤´éƒ¨é•¿åº¦
+	// handlerä¸ºå›è°ƒå‡½æ•°
 	void asyncReadFull(std::size_t max_length, std::function<void(const boost::system::error_code& error, std::size_t)> handler);
-	// ·â×°async_read_someÒì²½¶ÁÈ¡º¯Êı
-	// ¶ÁÈ¡Ö¸¶¨³¤¶ÈµÄÊı¾İ£¬read_lengthÎªÒÑ´¦ÀíµÄÊı¾İ£¬total_lengthÎª°üµÄ×Ü³¤¶È¡£
+	// å°è£…async_read_someå¼‚æ­¥è¯»å–å‡½æ•°
+	// è¯»å–æŒ‡å®šé•¿åº¦çš„æ•°æ®ï¼Œread_lengthä¸ºå·²å¤„ç†çš„æ•°æ®ï¼Œtotal_lengthä¸ºåŒ…çš„æ€»é•¿åº¦ã€‚
 	void asyncReadLen(std::size_t read_length, std::size_t total_length, std::function<void(const boost::system::error_code& error, std::size_t)> handler);
 
 	void handleWrite(const boost::system::error_code& error, std::shared_ptr<CSession> self_shared);
@@ -66,10 +68,12 @@ private:
 	CServer* _server;
 	bool _b_close;
 
-	// session uid
-	std::string _uuid;
+	// session id
+	std::string _session_id;
+	// user id
+	int _user_id;
 
-	// data, µ¥¸öÏûÏ¢µÄ»º³åÇø
+	// data, å•ä¸ªæ¶ˆæ¯çš„ç¼“å†²åŒº
 	char _data[MAX_LENGTH];
 
 	// send data

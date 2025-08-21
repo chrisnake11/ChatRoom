@@ -2,6 +2,8 @@
 #include "CSession.h"
 #include "StatusGrpcClient.h"
 #include "MysqlManager.h"
+#include "RedisManager.h"
+#include "UserManager.h"
 
 LogicSystem::LogicSystem() : _b_stop(false) {
 	registerHandler();
@@ -18,16 +20,16 @@ LogicSystem::~LogicSystem() {
 
 void LogicSystem::dealMsg() {
 	std::shared_ptr<LogicNode> node;
-	// Ñ­»·´¦ÀíÏûÏ¢¶ÓÁĞÖĞµÄÏûÏ¢
+	// å¾ªç¯å¤„ç†æ¶ˆæ¯é˜Ÿåˆ—ä¸­çš„æ¶ˆæ¯
 	while (true) {
-		// ¼ÓËø
+		// åŠ é”
 		std::unique_lock<std::mutex> lock(_node_mutex);
-		// Èç¹û¶ÓÁĞ²»Îª¿Õ»òÕß·şÎñÆ÷¹Ø±ÕÔò¼ÌĞø¡£
+		// å¦‚æœé˜Ÿåˆ—ä¸ä¸ºç©ºæˆ–è€…æœåŠ¡å™¨å…³é—­åˆ™ç»§ç»­ã€‚
 		while (_node_queue.empty() && !_b_stop) {
 			_consume.wait(lock);
 		}
 
-		// Èç¹û·şÎñÆ÷¹Ø±Õ£¬Ñ­»·Çå¿ÕÊı¾İ¡£
+		// å¦‚æœæœåŠ¡å™¨å…³é—­ï¼Œå¾ªç¯æ¸…ç©ºæ•°æ®ã€‚
 		if (_b_stop) {
 			while (!_node_queue.empty()) {
 				auto node = _node_queue.front();
@@ -42,11 +44,11 @@ void LogicSystem::dealMsg() {
 				callback_iter->second(node->_session, node->_recv_node->_msg_id, 
 					std::string(node->_recv_node->_data, node->_recv_node->_cur_length));
 			}
-			// Çå¿Õ¶ÓÁĞºó£¬ÍË³ö
+			// æ¸…ç©ºé˜Ÿåˆ—åï¼Œé€€å‡º
 			break;
 		}
 
-		// ¶ÓÁĞ²»Îª¿Õ£¬È¡³öÒ»¸ö½Úµã½øĞĞ´¦Àí
+		// é˜Ÿåˆ—ä¸ä¸ºç©ºï¼Œå–å‡ºä¸€ä¸ªèŠ‚ç‚¹è¿›è¡Œå¤„ç†
 		auto node = _node_queue.front();
 		auto msg_id = node->_recv_node->_msg_id;
 		std::cout << "logicSystem msg_id is: " << msg_id << std::endl;
@@ -66,7 +68,7 @@ void LogicSystem::dealMsg() {
 void LogicSystem::postMsgToQueue(std::shared_ptr<LogicNode> node) {
 	std::unique_lock<std::mutex> lock(_node_mutex);
 	_node_queue.push(node);
-	// Èç¹ûÓÉ¿Õ±äÎª²»¿Õ£¬»½ĞÑÏß³Ì
+	// å¦‚æœç”±ç©ºå˜ä¸ºä¸ç©ºï¼Œå”¤é†’çº¿ç¨‹
 	if (_node_queue.size() == 1) {
 		lock.unlock();
 		_consume.notify_one();
@@ -75,11 +77,11 @@ void LogicSystem::postMsgToQueue(std::shared_ptr<LogicNode> node) {
 
 void LogicSystem::registerHandler()
 {
-	_handlers[MSG_CHAT_LOGIN] = std::bind(&LogicSystem::loginHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+	_handlers[MSG_CHAT_LOGIN_REQ] = std::bind(&LogicSystem::loginHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 }
 
 void LogicSystem::loginHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data) {
-	// Json ½âÎö×Ö·û´®¸ñÊ½ÏûÏ¢
+	// Json è§£æå­—ç¬¦ä¸²æ ¼å¼æ¶ˆæ¯
 	Json::Reader reader;
 	Json::Value root;
 	reader.parse(msg_data, root);
@@ -87,43 +89,116 @@ void LogicSystem::loginHandler(std::shared_ptr<CSession> session, const short& m
 		", user token is: " << root["token"].asString() << std::endl;
 
 	// process data
-	// µÇÂ¼ÏÈÈ¥StatusServer²éÑ¯ÓÃ»§tokenÊÇ·ñÓĞĞ§
-	auto rsp = StatusGrpcClient::getInstance()->Login(root["uid"].asInt(), root["token"].asString());
-
 	Json::Value return_root;
 	Defer defer([this, &return_root, session]() {
 		std::string return_str = return_root.toStyledString();
-		session->send(return_str, MSG_CHAT_LOGIN);
+		session->send(return_str, MSG_CHAT_LOGIN_RSP);
 		});
-	
-	return_root["error"] = rsp.error();
-	if (return_root["error"] != ErrorCodes::SUCCESS) {
+
+	// ä»RedisæŸ¥è¯¢ç”¨æˆ·tokenæ˜¯å¦æœ‰æ•ˆ
+	int uid = root["uid"].asInt();
+	std::string uid_str = root["uid"].asString();
+	std::string token_key = USER_TOKEN + uid_str;
+	std::string token_value = "";
+	bool success = RedisManager::getInstance()->Get(token_key, token_value);
+
+	if(!success){
+		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
+		return;
+	}
+	if(token_value != root["token"].asString()) {
+		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
 		return;
 	}
 
-	// ChatServerµÄ±¾µØÄÚ´æÖĞ²éÑ¯ÓÃ»§ĞÅÏ¢
-	auto user_iter = _users.find(root["uid"].asInt());
-	std::shared_ptr<UserInfo> user_info = nullptr;
-	if (user_iter == _users.end()) {
-		// ÄÚ´æÕÒ²»µ½£¬È¥Êı¾İ¿â²éÑ¯
-		user_info = MysqlManager::getInstance()->getUser(root["uid"].asInt());
-		if (user_info == nullptr) {
-			return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
-			return;
-		}
-		// ½«ÓÃ»§ĞÅÏ¢´æÈëÄÚ´æ
-		_users[root["uid"].asInt()] = user_info;
-	}
-	else {
-		user_info = user_iter->second;
+	return_root["error"] = ErrorCodes::SUCCESS;
+
+	std::string base_key = USER_BASE_INFO + uid_str;
+	auto user_info = std::make_shared<UserInfo>();
+	bool b_base = getBaseInfo(base_key, uid, user_info);
+	if(!b_base) {
+		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
+		return;
 	}
 
 	return_root["uid"] = user_info->uid;
-	return_root["token"] = rsp.token();
+	return_root["passwd"] = user_info->passwd;
 	return_root["name"] = user_info->name;
+	return_root["email"] = user_info->email;
+	return_root["sex"] = user_info->sex;
+	return_root["avatar"] = user_info->avatar; 
+	return_root["sign"] = user_info->sign;
+	return_root["remark"] = user_info->remark;
 
-	// response data
-	std::string return_str = return_root.toStyledString();
-	session->send(return_str, msg_id);
+	// ä»æ•°æ®åº“è·å–å¥½å‹ç”³è¯·åˆ—è¡¨
+	// ä»æ•°æ®åº“è·å–å¥½å‹åˆ—è¡¨
+
+	auto server_name = ConfigManager::GetInstance()["SelfServer"]["Name"];
+	auto count_res = RedisManager::getInstance()->HGet(LOGIN_COUNT, server_name);
+	int count = 0;
+	if(!count_res.empty()) {
+		count = std::stoi(count_res);
+	}
+	count++;
+
+	auto count_str = std::to_string(count);
+	RedisManager::getInstance()->HSet(LOGIN_COUNT, server_name, count_str);
+
+	// sessionç»‘å®šç”¨æˆ·ID
+	session->setUserID(uid);
+
+	// ä¸ºç”¨æˆ·è®¾ç½®ç™»å½•serverçš„åå­—
+	std::string ipkey = USER_IP + uid_str;
+	// Redisè®°å½•ç”¨æˆ·ç™»å½•çš„ip server
+	RedisManager::getInstance()->Set(ipkey, server_name);
+
+	// uidå’ŒSessionç»‘å®šï¼Œä¸ºäº†æ–¹ä¾¿è¸¢äºº
+	UserManager::getInstance()->setUserSession(uid, session);
+
+	return;
+}
+
+bool LogicSystem::getBaseInfo(std::string base_key, int uid, std::shared_ptr<UserInfo>& user_info) {
+	// ä»RedisæŸ¥è¯¢ç”¨æˆ·åŸºæœ¬ä¿¡æ¯
+	std::string base_value = "";
+	bool success = RedisManager::getInstance()->Get(base_key, base_value);
+	if (success) {
+		Json::Reader reader;
+		Json::Value root;
+		reader.parse(base_value, root);
+		user_info->uid = root["uid"].asInt();
+		user_info->passwd = root["passwd"].asString();
+		user_info->name = root["name"].asString();
+		user_info->email = root["email"].asString();
+		user_info->avatar = root["avatar"].asString();
+		user_info->sign = root["sign"].asString();
+		user_info->remark = root["remark"].asString();
+		user_info->sex = root["sex"].asInt();
+	}
+	// ä»MysqlæŸ¥è¯¢ç”¨æˆ·åŸºæœ¬ä¿¡æ¯
+	else {
+		std::shared_ptr<UserInfo> tmp_user_info = nullptr;
+		tmp_user_info = MysqlManager::getInstance()->getUser(uid);
+		if(tmp_user_info == nullptr) {
+			// ç”¨æˆ·ä¸å­˜åœ¨
+			return false;
+		}
+
+		user_info = tmp_user_info;
+	
+		// å†™å…¥redisç¼“å­˜
+		Json::Value redis_root;
+		redis_root["uid"] = user_info->uid;
+		redis_root["passwd"] = user_info->passwd;
+		redis_root["name"] = user_info->name;
+		redis_root["email"] = user_info->email;
+		redis_root["sex"] = user_info->sex;
+		redis_root["avatar"] = user_info->avatar;
+		redis_root["sign"] = user_info->sign;
+		redis_root["remark"] = user_info->remark;
+		// Jsonåºåˆ—åŒ–åˆ°Redisä¸­
+		RedisManager::getInstance()->Set(base_key, redis_root.toStyledString());
+	}
+	return true;
 }
 

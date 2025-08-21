@@ -1,7 +1,7 @@
 #pragma once
 #include "Const.h"
 #include "MysqlDao.h"
-
+#include "Data.h"
 // 单例类进一步封装MySQLDao类
 class MysqlManager : public Singleton<MysqlManager>
 {

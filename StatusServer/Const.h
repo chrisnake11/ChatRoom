@@ -28,24 +28,24 @@ using tcp = net::ip::tcp;
 
 enum ErrorCodes {
 	SUCCESS = 0,
-	ERROR_JSON_PARSE_FAILED = 1001, // json½âÎöÊ§°Ü
-	ERROR_RPC_FAILED = 1002, // rpcµ÷ÓÃÊ§°Ü
-	ERROR_VARIFY_EXPIRED = 1003, // ÑéÖ¤Âë¹ýÆÚ
-	ERROR_VARIFY_WRONG = 1004, // ÑéÖ¤Âë´íÎó
-	ERROR_USER_EXIST = 1005, // ÓÃ»§ÒÑ´æÔÚ
-	ERROR_PASSWORD_WRONG = 1006, // ÃÜÂë´íÎó
-	ERROR_EMAIL_NOT_MATCH = 1007, // ÓÊÏä²»Æ¥Åä
-	ERROR_PASSWORD_UPDATE_FAILED = 1008, // ÃÜÂë¸üÐÂÊ§°Ü
-	ERROR_PASSWORD_INVALID = 1009, // ÃÜÂëÎÞÐ§ 
-	ERROR_UID_INVALID = 1010, // ÓÃ»§IDÎÞÐ§
-	ERROR_TOKEN_INVALID = 1011, // tokenÎÞÐ§
+	ERROR_JSON_PARSE_FAILED = 1001, // jsonè§£æžå¤±è´¥
+	ERROR_RPC_FAILED = 1002, // rpcè°ƒç”¨å¤±è´¥
+	ERROR_VARIFY_EXPIRED = 1003, // éªŒè¯ç è¿‡æœŸ
+	ERROR_VARIFY_WRONG = 1004, // éªŒè¯ç é”™è¯¯
+	ERROR_USER_EXIST = 1005, // ç”¨æˆ·å·²å­˜åœ¨
+	ERROR_PASSWORD_WRONG = 1006, // å¯†ç é”™è¯¯
+	ERROR_EMAIL_NOT_MATCH = 1007, // é‚®ç®±ä¸åŒ¹é…
+	ERROR_PASSWORD_UPDATE_FAILED = 1008, // å¯†ç æ›´æ–°å¤±è´¥
+	ERROR_PASSWORD_INVALID = 1009, // å¯†ç æ— æ•ˆ 
+	ERROR_UID_INVALID = 1010, // ç”¨æˆ·IDæ— æ•ˆ
+	ERROR_TOKEN_INVALID = 1011, // tokenæ— æ•ˆ
 };
 
 const std::string CODEPREFIX = "code_";
 
 
-// DeferÀà£¬ÓÃÓÚÈ·±£Ä³¸öº¯ÊýÔÚÀë¿ª×÷ÓÃÓòÏú»ÙÊ±µ÷ÓÃ
-// Ê¾Àý£º
+// Deferç±»ï¼Œç”¨äºŽç¡®ä¿æŸä¸ªå‡½æ•°åœ¨ç¦»å¼€ä½œç”¨åŸŸé”€æ¯æ—¶è°ƒç”¨
+// ç¤ºä¾‹ï¼š
 // start scope
 // {
 //     Defer defer([&]() {
@@ -63,8 +63,8 @@ private:
 };
 
 
-// DeferHelperÀà£¬ÓÃÓÚÈ·±£Ä³¸öº¯ÊýÔÚÀë¿ª×÷ÓÃÓòÏú»ÙÊ±µ÷ÓÃ
-// T Îª¿ÉÒÆ¶¯ÇÒ¿Éµ÷ÓÃµÄ¶ÔÏó
+// DeferHelperç±»ï¼Œç”¨äºŽç¡®ä¿æŸä¸ªå‡½æ•°åœ¨ç¦»å¼€ä½œç”¨åŸŸé”€æ¯æ—¶è°ƒç”¨
+// T ä¸ºå¯ç§»åŠ¨ä¸”å¯è°ƒç”¨çš„å¯¹è±¡
 template<typename T>
 class DeferHelper {
 public:
@@ -87,5 +87,8 @@ struct UserInfo {
 };
 
 
-#define USERTOKENPREFIX "usertoken_"
-#define LOGIN_COUNT  "logincount"
+#define USER_TOKEN "usertoken_"
+#define USER_IP "userip_"
+#define IP_COUNT "ipcount_"
+#define LOGIN_COUNT "logincount_"
+#define USER_BASE_INFO "userbaseinfo_" 

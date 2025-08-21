@@ -6,6 +6,7 @@
 #include <mutex>
 #include <queue>
 #include <unordered_map>
+#include "Data.h"
 class CSession;
 class LogicNode;
 
@@ -21,21 +22,19 @@ private:
 	void registerHandler();
 	void dealMsg();
 
-	// µÇÂ¼Âß¼­´¦Àí
+	// ç™»å½•é€»è¾‘å¤„ç†
 	void loginHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
+	bool getBaseInfo(std::string base_key, int uid,std::shared_ptr<UserInfo>& user_info);
 
 	// 
 	bool _b_stop;
 
-	// µ¥Ïß³Ì´¦ÀíÏûÏ¢½Úµã¡£
+	// å•çº¿ç¨‹å¤„ç†æ¶ˆæ¯èŠ‚ç‚¹ã€‚
 	std::mutex _node_mutex;
 	std::queue<std::shared_ptr<LogicNode>> _node_queue;
 	std::thread _work_thread;
 	std::condition_variable _consume;
 
-	// ²»Í¬ÏûÏ¢µÄÂß¼­º¯ÊıÁĞ±í
+	// ä¸åŒæ¶ˆæ¯çš„é€»è¾‘å‡½æ•°åˆ—è¡¨
 	std::map <short, node_callback> _handlers;
-
-	// ÓÃ»§ÁĞ±í
-	std::unordered_map<int, std::shared_ptr<UserInfo>> _users;
 };

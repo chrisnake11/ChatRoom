@@ -14,6 +14,7 @@
 #include <jdbc/cppconn/exception.h>
 #include <memory>
 #include "ConfigManager.h"
+#include "Data.h"
 
 
 class SqlConnection {
