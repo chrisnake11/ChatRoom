@@ -6,7 +6,6 @@
 #include "ConfigManager.h"
 #include "hiredis.h"
 #include "RedisManager.h"
-#include "MysqlManager.h"
 #include "AsioIOServicePool.h"
 #include <iostream>
 #include <memory>
@@ -18,39 +17,39 @@
 void RunServer() {
 	auto& cfg = ConfigManager::GetInstance();
 
-	// grpc¼àÌıµÄµØÖ·
+	// grpcç›‘å¬çš„åœ°å€
 	std::string server_address(cfg["StatusServer"]["Host"] + ":" + cfg["StatusServer"]["Port"]);
 	
-	// grpc·şÎñÊµÀı
+	// grpcæœåŠ¡å®ä¾‹
 	StatusServiceImpl service;
 
-	// ´´½¨grpc·şÎñÆ÷
+	// åˆ›å»ºgrpcæœåŠ¡å™¨
 	grpc::ServerBuilder builder;
-	// ¼àÌı¶Ë¿ÚºÍÌí¼Ó·şÎñ
+	// ç›‘å¬ç«¯å£å’Œæ·»åŠ æœåŠ¡
 	builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
 	builder.RegisterService(&service);
 
-	// ¹¹½¨²¢Æô¶¯gRPC·şÎñÆ÷
+	// æ„å»ºå¹¶å¯åŠ¨gRPCæœåŠ¡å™¨
 	std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
 	std::cout << "Server listening on " << server_address << std::endl;
 
-	// ´´½¨Boost.AsioµÄio_context
+	// åˆ›å»ºBoost.Asioçš„io_context
 	boost::asio::io_context io_context;
-	// ´´½¨signal_setÓÃÓÚ²¶»ñSIGINT£¬²¢¹Ø±Õgrpc·şÎñÆ÷
+	// åˆ›å»ºsignal_setç”¨äºæ•è·SIGINTï¼Œå¹¶å…³é—­grpcæœåŠ¡å™¨
 	boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
 	signals.async_wait([&server](const boost::system::error_code& error, int signal_number) {
 		if (!error) {
 			std::cout << "Shutting down server..." << std::endl;
-			server->Shutdown(); // ÓÅÑÅµØ¹Ø±Õ·şÎñÆ÷
+			server->Shutdown(); // ä¼˜é›…åœ°å…³é—­æœåŠ¡å™¨
 		}
 		});
 
-	// ÊØ»¤Ïß³ÌÔËĞĞio_context£¬²¶»ñSIGINTĞÅºÅ
+	// å®ˆæŠ¤çº¿ç¨‹è¿è¡Œio_contextï¼Œæ•è·SIGINTä¿¡å·
 	std::thread([&io_context]() { io_context.run(); }).detach();
 
-	// µÈ´ıgrpc·şÎñÆ÷¹Ø±Õ
+	// ç­‰å¾…grpcæœåŠ¡å™¨å…³é—­
 	server->Wait();
-	// Í£Ö¹boostµÄio_context·şÎñ
+	// åœæ­¢boostçš„io_contextæœåŠ¡
 	io_context.stop();
 }
 

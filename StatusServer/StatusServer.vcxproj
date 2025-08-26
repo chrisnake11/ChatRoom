@@ -129,8 +129,6 @@
     <ClInclude Include="Const.h" />
     <ClInclude Include="message.grpc.pb.h" />
     <ClInclude Include="message.pb.h" />
-    <ClInclude Include="MysqlDao.h" />
-    <ClInclude Include="MysqlManager.h" />
     <ClInclude Include="RedisManager.h" />
     <ClInclude Include="Singleton.h" />
     <ClInclude Include="StatusServiceImpl.h" />
@@ -140,8 +138,6 @@
     <ClCompile Include="ConfigManager.cpp" />
     <ClCompile Include="message.grpc.pb.cc" />
     <ClCompile Include="message.pb.cc" />
-    <ClCompile Include="MysqlDao.cpp" />
-    <ClCompile Include="MysqlManager.cpp" />
     <ClCompile Include="RedisManager.cpp" />
     <ClCompile Include="StatusServer.cpp" />
     <ClCompile Include="StatusServiceImpl.cpp" />
@@ -151,8 +147,6 @@
     <None Include="hiredisd.dll" />
     <None Include="jsoncpp.dll" />
     <None Include="message.proto" />
-    <None Include="mysqlcppconn-9-vs14.dll" />
-    <None Include="mysqlcppconn8-2-vs14.dll" />
     <None Include="redis++.dll" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

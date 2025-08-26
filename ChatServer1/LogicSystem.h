@@ -24,7 +24,10 @@ private:
 
 	// 登录逻辑处理
 	void loginHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
-	bool getBaseInfo(std::string base_key, int uid,std::shared_ptr<UserInfo>& user_info);
+
+	// 从redis中获取用户信息，或在MySQL中获取缓存到Redis中，读取到user_info
+	// base_key为redis_key
+	std::unique_ptr<UserInfo> getUserInfo(std::string base_key, int uid);
 
 	// 
 	bool _b_stop;

@@ -29,10 +29,10 @@ class MysqlPool
 public:
     MysqlPool(const std::string& url, const std::string& user, const std::string& passwd,
         const std::string& schema, std::size_t pool_size);
-    std::unique_ptr<SqlConnection> GetConnection();
-    void ReturnConnection(std::unique_ptr<SqlConnection> conn);
-    void CheckConnection();
-    void Close();
+    std::unique_ptr<SqlConnection> getConnection();
+    void returnConnection(std::unique_ptr<SqlConnection> conn);
+    void checkConnection();
+    void close();
     ~MysqlPool();
 
 private:
@@ -50,20 +50,13 @@ private:
 };
 
 
-// 封装与MySQL数据库的操作
+// 灏佽涓嶮ySQL鏁版嵁搴撶殑鎿嶄綔
 class MysqlDao {
 public:
     MysqlDao();
     ~MysqlDao();
 
-    // 用户注册操作
-    int RegisterUser(const std::string& name, const std::string& email, const std::string& passwd);
-
-    int ResetUser(const std::string& email, const std::string& passwd);
-
-    bool checkPasswd(const std::string& name, const std::string& passwd, UserInfo& user_info);
-
-    std::shared_ptr<UserInfo> getUser(int uid);
+	std::unique_ptr<UserInfo> getUserInfo(int uid);
 
 private:
     std::unique_ptr<MysqlPool> _pool;

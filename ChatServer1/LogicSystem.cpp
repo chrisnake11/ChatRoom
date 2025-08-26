@@ -81,6 +81,7 @@ void LogicSystem::registerHandler()
 }
 
 void LogicSystem::loginHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data) {
+	
 	// Json 解析字符串格式消息
 	Json::Reader reader;
 	Json::Value root;
@@ -113,26 +114,30 @@ void LogicSystem::loginHandler(std::shared_ptr<CSession> session, const short& m
 
 	return_root["error"] = ErrorCodes::SUCCESS;
 
+	// Redis 读取用户信息
 	std::string base_key = USER_BASE_INFO + uid_str;
-	auto user_info = std::make_shared<UserInfo>();
-	bool b_base = getBaseInfo(base_key, uid, user_info);
-	if(!b_base) {
+	auto user_info = getUserInfo(base_key, uid);
+	// 返回空指针，用户不存在
+	if(!user_info) {
 		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
 		return;
 	}
 
-	return_root["uid"] = user_info->uid;
-	return_root["passwd"] = user_info->passwd;
-	return_root["name"] = user_info->name;
-	return_root["email"] = user_info->email;
-	return_root["sex"] = user_info->sex;
-	return_root["avatar"] = user_info->avatar; 
-	return_root["sign"] = user_info->sign;
-	return_root["remark"] = user_info->remark;
+	// 将用户信息添加到Json结果中。
+	Json::Value user_json;
+	UserInfo::convertToJson(user_info, user_json);
+	// 将user_info作为对象，存储在Json结果中
+	return_root["user_info"] = user_json;
+
+	// 将uid和token添加到Json结果中
+	return_root["uid"] = root["uid"];
+	return_root["token"] = root["token"];
+
 
 	// 从数据库获取好友申请列表
 	// 从数据库获取好友列表
 
+	// 更新redis中，ChatRoom的连接数量
 	auto server_name = ConfigManager::GetInstance()["SelfServer"]["Name"];
 	auto count_res = RedisManager::getInstance()->HGet(LOGIN_COUNT, server_name);
 	int count = 0;
@@ -140,7 +145,6 @@ void LogicSystem::loginHandler(std::shared_ptr<CSession> session, const short& m
 		count = std::stoi(count_res);
 	}
 	count++;
-
 	auto count_str = std::to_string(count);
 	RedisManager::getInstance()->HSet(LOGIN_COUNT, server_name, count_str);
 
@@ -149,56 +153,47 @@ void LogicSystem::loginHandler(std::shared_ptr<CSession> session, const short& m
 
 	// 为用户设置登录server的名字
 	std::string ipkey = USER_IP + uid_str;
-	// Redis记录用户登录的ip server
+
+	// Redis记录用户登录的ip - server
 	RedisManager::getInstance()->Set(ipkey, server_name);
 
-	// uid和Session绑定，为了方便踢人
+	// uid和Session绑定，为了管理session
 	UserManager::getInstance()->setUserSession(uid, session);
+
+	std::cout << "LogicSystem return_root user_info: " << return_root.toStyledString() << std::endl;
+
+	// Session发送TCP响应数据
+    session->send(return_root.toStyledString(), MSG_ID::MSG_CHAT_LOGIN_RSP);
 
 	return;
 }
 
-bool LogicSystem::getBaseInfo(std::string base_key, int uid, std::shared_ptr<UserInfo>& user_info) {
+std::unique_ptr<UserInfo> LogicSystem::getUserInfo(std::string base_key, int uid) {
 	// 从Redis查询用户基本信息
 	std::string base_value = "";
 	bool success = RedisManager::getInstance()->Get(base_key, base_value);
+	Json::Value root;
+	Json::Reader reader;
 	if (success) {
-		Json::Reader reader;
-		Json::Value root;
-		reader.parse(base_value, root);
-		user_info->uid = root["uid"].asInt();
-		user_info->passwd = root["passwd"].asString();
-		user_info->name = root["name"].asString();
-		user_info->email = root["email"].asString();
-		user_info->avatar = root["avatar"].asString();
-		user_info->sign = root["sign"].asString();
-		user_info->remark = root["remark"].asString();
-		user_info->sex = root["sex"].asInt();
+        if (reader.parse(base_value, root)) {
+			std::unique_ptr<UserInfo> user_info = std::make_unique<UserInfo>();
+			UserInfo::loadFromJson(user_info, root);
+			return user_info;
+		}
+		return nullptr;
 	}
 	// 从Mysql查询用户基本信息
 	else {
-		std::shared_ptr<UserInfo> tmp_user_info = nullptr;
-		tmp_user_info = MysqlManager::getInstance()->getUser(uid);
-		if(tmp_user_info == nullptr) {
+		std::unique_ptr<UserInfo> user_info = MysqlManager::getInstance()->getUserInfo(uid);
+		if(user_info == nullptr) {
 			// 用户不存在
-			return false;
+			return nullptr;
 		}
-
-		user_info = tmp_user_info;
-	
+		// 序列化成Json
+        UserInfo::convertToJson(user_info, root);
 		// 写入redis缓存
-		Json::Value redis_root;
-		redis_root["uid"] = user_info->uid;
-		redis_root["passwd"] = user_info->passwd;
-		redis_root["name"] = user_info->name;
-		redis_root["email"] = user_info->email;
-		redis_root["sex"] = user_info->sex;
-		redis_root["avatar"] = user_info->avatar;
-		redis_root["sign"] = user_info->sign;
-		redis_root["remark"] = user_info->remark;
-		// Json序列化到Redis中
-		RedisManager::getInstance()->Set(base_key, redis_root.toStyledString());
+		RedisManager::getInstance()->Set(base_key, root.toStyledString());
+		return user_info;
 	}
-	return true;
 }
 

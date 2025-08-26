@@ -2,17 +2,17 @@
 #include "Const.h"
 #include "MysqlDao.h"
 
-// µ¥ÀıÀà½øÒ»²½·â×°MySQLDaoÀà
+// å•ä¾‹ç±»è¿›ä¸€æ­¥å°è£…MySQLDaoç±»
 class MysqlManager : public Singleton<MysqlManager>
 {
 	friend class Singleton<MysqlManager>;
 public:
 	~MysqlManager();
-	int RegisterUser(const std::string& name, const std::string& email, const std::string& passwd);
+	int registerUser(const std::string& name, const std::string& email, const std::string& passwd);
 
-	int ResetUser(const std::string& email, const std::string& passwd);
+	int resetUserPasswd(const std::string& email, const std::string& passwd);
 
-	bool checkPasswd(const std::string& name, const std::string& passwd, UserInfo& user_info);
+	bool checkNameAndPasswd(const std::string& name, const std::string& passwd, UserInfo& user_info);
 private:
 	MysqlManager();
 	MysqlDao _dao;

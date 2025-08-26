@@ -31,7 +31,7 @@ Status StatusServiceImpl::GetChatServer(ServerContext* context, const GetChatSer
 Status StatusServiceImpl::Login(ServerContext* context, const message::LoginReq* request, message::LoginRsp* response)
 {
 	/*
-		在本地map中查找用户ID和token是否匹配
+		在Redis中查找用户ID和token是否匹配
 	*/
 	auto uid = request->uid();
 	auto token = request->token();
@@ -109,12 +109,12 @@ ChatServer StatusServiceImpl::getChatServer()
 		}
 	}
 	
-	// 假设不会所有服务器都满了。
-	// 如果连接数是最大值，说明是第一次登录，设置连接数为1
+	// 服务器都满了
 	if(min_server.con_count == INT_MAX) {
+		// 可以报错提示
 		std::cout << "all servers are full connected" << std::endl;
 	}
-	// 否则，更新连接数加1
+	// 更新连接数加1
 	else{
 		RedisManager::getInstance()->HSet(LOGIN_COUNT, min_server.name, std::to_string(min_server.con_count + 1));
 	}

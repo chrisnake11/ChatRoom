@@ -36,8 +36,11 @@ void CServer::close() {
 
 void CServer::startAccept() {
 	std::cout << "server start accept..." << std::endl;
+	// 从连接池获取一个io_context
 	auto& io_context = AsioIOServicePool::getInstance()->GetIOService();
+	// 创建一个session，分配连接池的io_context
 	std::shared_ptr<CSession> new_session = std::make_shared<CSession>(io_context, this);
+	// 启动一个accept
 	_acceptor.async_accept(new_session->getSocket(), std::bind(&CServer::handleAccept, this, new_session, std::placeholders::_1));
 }
 

@@ -7,40 +7,40 @@
 
 bool LogicSystem::HandleGet(std::string path, std::shared_ptr<HttpConnection> http_conn)
 {
-	// ÕÒÖ¸¶¨ path µÄGetHandler
+	// æ‰¾æŒ‡å®š path çš„GetHandler
 	if (_get_handlers.find(path) == _get_handlers.end()) {
 		return false;
 	}
-	// µ÷ÓÃGetHandler
+	// è°ƒç”¨GetHandler
 	_get_handlers[path](http_conn);
 	return true;
 }
 
 bool LogicSystem::HandlePost(std::string path, std::shared_ptr<HttpConnection> http_conn)
 {
-	// ÕÒÖ¸¶¨ path µÄPostHandler
+	// æ‰¾æŒ‡å®š path çš„PostHandler
 	if (_post_handlers.find(path) == _post_handlers.end()) {
 		return false;
 	}
-	// µ÷ÓÃPostHandler
+	// è°ƒç”¨PostHandler
 	_post_handlers[path](http_conn);
 	return true;
 }
 
 void LogicSystem::RegisterGet(std::string url, HttpHandler handler)
 {
-	// Ìí¼ÓÒ»¸ö GetHandler
+	// æ·»åŠ ä¸€ä¸ª GetHandler
 	_get_handlers.insert(std::make_pair(url, handler));
 }
 
 void LogicSystem::RegisterPost(std::string url, HttpHandler handler)
 {
-	// Ìí¼ÓÒ»¸ö PostHandler
+	// æ·»åŠ ä¸€ä¸ª PostHandler
 	_post_handlers.insert(std::make_pair(url, handler));
 }
 
 LogicSystem::LogicSystem() {
-	// ×¢²áÒ»¸ö GetHandler
+	// æ³¨å†Œä¸€ä¸ª GetHandler
 	RegisterGet("/get_test", [](std::shared_ptr<HttpConnection> connection) {
 		beast::ostream(connection->_response.body()) << "receive get_test request" << std::endl;
 			int i = 0;
@@ -52,17 +52,17 @@ LogicSystem::LogicSystem() {
 		});
 
 	RegisterPost("/get_varify_code", [](std::shared_ptr<HttpConnection> connection) {
-		// »ñÈ¡ÇëÇóÌå
+		// è·å–è¯·æ±‚ä½“
 		auto body_str = beast::buffers_to_string(connection->_request.body().data());
 		std::cout << "request_body is: " << body_str << std::endl;
 
-		// ÉèÖÃÏìÓ¦Í·
+		// è®¾ç½®å“åº”å¤´
 		connection->_response.set(http::field::content_type, "text/plain");
 
 		Json::Value root;
 		Json::Reader reader;
 		Json::Value response_root;
-		// ½âÎöÇëÇóÌåJsonÊı¾İ
+		// è§£æè¯·æ±‚ä½“Jsonæ•°æ®
 		bool parse_success = reader.parse(body_str, root);
 		if (!parse_success) {
 			std::cout << "Failed to parse json" << std::endl;
@@ -73,15 +73,15 @@ LogicSystem::LogicSystem() {
 		}
 
 
-		// »ñÈ¡ÇëÇóÌåJsonÄÚÈİ
+		// è·å–è¯·æ±‚ä½“Jsonå†…å®¹
 		auto email = root["email"].asString();
 		std::cout << "email: " << email << std::endl;
 
-		// Ê¹ÓÃGrpc£¬ÏòÑéÖ¤·şÎñÆ÷·¢ËÍÇëÇó
+		// ä½¿ç”¨Grpcï¼Œå‘éªŒè¯æœåŠ¡å™¨å‘é€è¯·æ±‚
 		GetVarifyRsp response = VerifyGrpcClient::GetInstance()->GetVarifyCode(email);
 		root["error"] = response.error();
 
-		// ½«½á¹û·µ»Ø¸ø¿Í»§¶Ë
+		// å°†ç»“æœè¿”å›ç»™å®¢æˆ·ç«¯
 		response_root["error"] = response.error();
 		response_root["code"] = response.code();
         std::string response_str = response_root.toStyledString();
@@ -91,19 +91,19 @@ LogicSystem::LogicSystem() {
 		});
 
 	RegisterPost("/user_register", [](std::shared_ptr<HttpConnection> connection) {
-		// »ñÈ¡ÇëÇóÌå
+		// è·å–è¯·æ±‚ä½“
 		auto body_str = beast::buffers_to_string(connection->_request.body().data());
 		std::cout << "request_body is: " << body_str << std::endl;
 
-		// ÉèÖÃÏìÓ¦Í·
+		// è®¾ç½®å“åº”å¤´
 		connection->_response.set(http::field::content_type, "text/plain");
 
 		Json::Value root;
 		Json::Reader reader;
 		Json::Value response_root;
-		// ½âÎöÇëÇóÌåJsonÊı¾İ
+		// è§£æè¯·æ±‚ä½“Jsonæ•°æ®
 		bool parse_success = reader.parse(body_str, root);
-		// ½âÎöÊ§°Ü
+		// è§£æå¤±è´¥
 		if (!parse_success) {
 			std::cout << "Failed to parse json" << std::endl;
 			response_root["error"] = ErrorCodes::ERROR_JSON_PARSE_FAILED;
@@ -112,11 +112,11 @@ LogicSystem::LogicSystem() {
 			return true;
 		}
 
-		// ²éÑ¯RedisÖĞµÄÑéÖ¤Âë
+		// æŸ¥è¯¢Redisä¸­çš„éªŒè¯ç 
 		std::string varify_code;
 		bool b_get_varify_code = RedisManager::GetInstance()->Get(CODEPREFIX+root["email"].asString(), varify_code);
 		std::cout << "get varify code: " << CODEPREFIX + root["email"].asString() << " " << varify_code << std::endl;
-		// ²éÑ¯Ê§°Ü
+		// æŸ¥è¯¢å¤±è´¥
 		if (!b_get_varify_code) {
 			response_root["error"] = ErrorCodes::ERROR_VARIFY_EXPIRED;
 			std::cout << " varify code expired" << std::endl;
@@ -133,10 +133,10 @@ LogicSystem::LogicSystem() {
 			return true;
 		}
 		
-		// MySQL²éÕÒÓÃ»§
-		int uid = MysqlManager::GetInstance()->RegisterUser(root["name"].asString(), root["email"].asString(), root["passwd"].asString());
+		// MySQLæŸ¥æ‰¾ç”¨æˆ·
+		int uid = MysqlManager::GetInstance()->registerUser(root["name"].asString(), root["email"].asString(), root["passwd"].asString());
 
-		// ÓÃ»§ÒÑ´æÔÚ
+		// ç”¨æˆ·å·²å­˜åœ¨
 		if (uid == 0 || uid == -1) {
 			std::cout << "user or email exist" << std::endl;
 			response_root["error"] = ErrorCodes::ERROR_USER_EXIST;
@@ -146,10 +146,10 @@ LogicSystem::LogicSystem() {
 		}
 
 			
-		// ³É¹¦£¬É¾³ıÑéÖ¤Âë
-		RedisManager::GetInstance()->Del(CODEPREFIX+root["email"].asString());
+		// æˆåŠŸï¼Œåˆ é™¤éªŒè¯ç 
+		//RedisManager::GetInstance()->Del(CODEPREFIX+root["email"].asString());
 
-		// ·µ»ØÏìÓ¦½á¹û
+		// è¿”å›å“åº”ç»“æœ
 		response_root["error"] = ErrorCodes::SUCCESS;
 		response_root["uid"] = uid;
 		response_root["name"] = root["name"];
@@ -163,19 +163,19 @@ LogicSystem::LogicSystem() {
 		});
 
 	RegisterPost("/user_reset", [](std::shared_ptr<HttpConnection> connection) {
-		// »ñÈ¡ÇëÇóÌå
+		// è·å–è¯·æ±‚ä½“
 		auto body_str = beast::buffers_to_string(connection->_request.body().data());
 		std::cout << "request_body is: " << body_str << std::endl;
 
-		// ÉèÖÃÏìÓ¦Í·
+		// è®¾ç½®å“åº”å¤´
 		connection->_response.set(http::field::content_type, "text/plain");
 
 		Json::Value root;
 		Json::Reader reader;
 		Json::Value response_root;
-		// ½âÎöÇëÇóÌåJsonÊı¾İ
+		// è§£æè¯·æ±‚ä½“Jsonæ•°æ®
 		bool parse_success = reader.parse(body_str, root);
-		// ½âÎöÊ§°Ü
+		// è§£æå¤±è´¥
 		if (!parse_success) {
 			std::cout << "Failed to parse json" << std::endl;
 			response_root["error"] = ErrorCodes::ERROR_JSON_PARSE_FAILED;
@@ -184,11 +184,11 @@ LogicSystem::LogicSystem() {
 			return true;
 		}
 
-		// ²éÑ¯RedisÖĞµÄÑéÖ¤Âë
+		// æŸ¥è¯¢Redisä¸­çš„éªŒè¯ç 
 		std::string varify_code;
 		bool b_get_varify_code = RedisManager::GetInstance()->Get(CODEPREFIX + root["email"].asString(), varify_code);
 		std::cout << "get varify code: " << CODEPREFIX + root["email"].asString() << " " << varify_code << std::endl;
-		// ²éÑ¯Ê§°Ü
+		// æŸ¥è¯¢å¤±è´¥
 		if (!b_get_varify_code) {
 			response_root["error"] = ErrorCodes::ERROR_VARIFY_EXPIRED;
 			std::cout << " varify code expired" << std::endl;
@@ -206,7 +206,7 @@ LogicSystem::LogicSystem() {
 		}
 
 		// MySQL search email and reset password
-		int uid = MysqlManager::GetInstance()->ResetUser(root["email"].asString(), root["passwd"].asString());
+		int uid = MysqlManager::GetInstance()->resetUserPasswd(root["email"].asString(), root["passwd"].asString());
 
 		// email not exists
 		if (uid == 0 || uid == -1) {
@@ -218,10 +218,10 @@ LogicSystem::LogicSystem() {
 		}
 
 
-		// ³É¹¦£¬É¾³ıÑéÖ¤Âë
-		RedisManager::GetInstance()->Del(CODEPREFIX+root["email"].asString());
+		// æˆåŠŸï¼Œåˆ é™¤éªŒè¯ç 
+		//RedisManager::GetInstance()->Del(CODEPREFIX+root["email"].asString());
 
-		// ·µ»ØÏìÓ¦½á¹û
+		// è¿”å›å“åº”ç»“æœ
 		response_root["error"] = ErrorCodes::SUCCESS;
 		response_root["uid"] = uid;
 		response_root["email"] = root["email"];
@@ -234,20 +234,20 @@ LogicSystem::LogicSystem() {
 		});
 
 	RegisterPost("/user_login", [](std::shared_ptr<HttpConnection> connection) {
-		// »ñÈ¡ÇëÇóÌå
+		// è·å–è¯·æ±‚ä½“
 		auto body_str = beast::buffers_to_string(connection->_request.body().data());
 		std::cout << "request_body is: " << body_str << std::endl;
 
-		// ÉèÖÃÏìÓ¦Í·
+		// è®¾ç½®å“åº”å¤´
 		connection->_response.set(http::field::content_type, "text/plain");
 
 		Json::Value root;
 		Json::Reader reader;
 		Json::Value response_root;
 
-		// ½âÎöÇëÇóÌåJsonÊı¾İ
+		// è§£æè¯·æ±‚ä½“Jsonæ•°æ®
 		bool parse_success = reader.parse(body_str, root);
-		// ½âÎöÊ§°Ü
+		// è§£æå¤±è´¥
 		if (!parse_success) {
 			std::cout << "Failed to parse json" << std::endl;
 			response_root["error"] = ErrorCodes::ERROR_JSON_PARSE_FAILED;
@@ -260,8 +260,8 @@ LogicSystem::LogicSystem() {
 		auto passwd = root["passwd"].asString();
 		UserInfo user_info;
 		
-		// ÑéÖ¤ÃÜÂë
-		bool passwd_valid = MysqlManager::GetInstance()->checkPasswd(name, passwd, user_info);
+		// éªŒè¯å¯†ç 
+		bool passwd_valid = MysqlManager::GetInstance()->checkNameAndPasswd(name, passwd, user_info);
 		if (!passwd_valid) {
 			std::cout << "passwd wrong" << std::endl;
 			root["error"] = ErrorCodes::ERROR_PASSWORD_WRONG;
@@ -270,9 +270,9 @@ LogicSystem::LogicSystem() {
 			return true;
 		}
 
-		// »ñÈ¡ÓÃ»§×´Ì¬
+		// è·å–ç”¨æˆ·çŠ¶æ€
 		auto reply = StatusGrpcClient::GetInstance()->GetChatServer(user_info.uid);
-		// ´òÓ¡ÈÕÖ¾
+		// æ‰“å°æ—¥å¿—
 		std::cout << "get status reply is: " 
 			<< reply.host() << ", " 
 			<< reply.port() << ", " 
@@ -289,7 +289,7 @@ LogicSystem::LogicSystem() {
 		}
 		
 
-		// ·µ»ØÏìÓ¦½á¹û
+		// è¿”å›å“åº”ç»“æœ
 		std::cout << "success to load userinfo. uid is: " << user_info.uid << std::endl;
 		response_root["error"] = ErrorCodes::SUCCESS;
         response_root["name"] = name;

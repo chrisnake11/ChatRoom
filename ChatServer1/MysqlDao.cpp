@@ -17,11 +17,11 @@ MysqlPool::MysqlPool(const std::string& url, const std::string& user, const std:
 
         _check_thread = std::thread([this]() {
             while (!_b_stop) {
-                CheckConnection();
+                checkConnection();
                 std::this_thread::sleep_for(std::chrono::seconds(60));
             }
             });
-        //  Æô¶¯¼ì²éÏß³Ì(ÊØ»¤Ïß³Ì)
+        //  å¯åŠ¨æ£€æŸ¥çº¿ç¨‹(å®ˆæŠ¤çº¿ç¨‹)
         _check_thread.detach();
     }
     catch (sql::SQLException& e) {
@@ -31,13 +31,13 @@ MysqlPool::MysqlPool(const std::string& url, const std::string& user, const std:
 
 MysqlPool::~MysqlPool() {
     std::unique_lock<std::mutex> lock(_mutex);
-    // ÎªÊ²Ã´Ö»ĞèÒªÇå¿Õ¶ÓÁĞ£¬¶ø²»ĞèÒªÊÍ·ÅÁ¬½ÓÄØ£¿
+    // ä¸ºä»€ä¹ˆåªéœ€è¦æ¸…ç©ºé˜Ÿåˆ—ï¼Œè€Œä¸éœ€è¦é‡Šæ”¾è¿æ¥å‘¢ï¼Ÿ
     while (!_pool.empty()) {
         _pool.pop();
     }
 }
 
-void MysqlPool::CheckConnection() {
+void MysqlPool::checkConnection() {
     std::lock_guard<std::mutex> lock(_mutex);
     int pool_size = _pool.size();
     auto current_time = std::chrono::system_clock::now().time_since_epoch();
@@ -49,21 +49,21 @@ void MysqlPool::CheckConnection() {
             _pool.push(std::move(con));
             });
 
-        // 5ÃëÄÚ¼ì²é¹ı£¬ÔòÌø¹ı
+        // 5ç§’å†…æ£€æŸ¥è¿‡ï¼Œåˆ™è·³è¿‡
         if (time_now - con->_last_time < 5) {
             continue;
         }
 
-        // ¼ì²éÁ¬½ÓÊÇ·ñ¿ÉÓÃ
+        // æ£€æŸ¥è¿æ¥æ˜¯å¦å¯ç”¨
         try {
-            // ´´½¨Statement
+            // åˆ›å»ºStatement
             std::unique_ptr<sql::Statement> stmt(con->_con->createStatement());
             stmt->executeQuery("select 1");
             con->_last_time = time_now;
             std::cout << "execute timer alive query, cur is " << time_now << std::endl;
         }
         catch (sql::SQLException& e) {
-            // Á¬½ÓÒì³£, ÖØĞÂ´´½¨Á¬½Ó£¬²¢Ìæ»»Ô­Á¬½Ó
+            // è¿æ¥å¼‚å¸¸, é‡æ–°åˆ›å»ºè¿æ¥ï¼Œå¹¶æ›¿æ¢åŸè¿æ¥
             std::cout << "Error keeping connection alive: " << e.what() << std::endl;
             sql::mysql::MySQL_Driver* driver = sql::mysql::get_mysql_driver_instance();
             auto* new_con = driver->connect(_url, _user, _passwd);
@@ -74,7 +74,7 @@ void MysqlPool::CheckConnection() {
     }
 }
 
-void MysqlPool::ReturnConnection(std::unique_ptr<SqlConnection> conn)
+void MysqlPool::returnConnection(std::unique_ptr<SqlConnection> conn)
 {
     std::unique_lock<std::mutex> lock(_mutex);
     if (_b_stop) {
@@ -84,25 +84,25 @@ void MysqlPool::ReturnConnection(std::unique_ptr<SqlConnection> conn)
     _cond.notify_one();
 }
 
-void MysqlPool::Close() {
+void MysqlPool::close() {
     _b_stop = true;
-    // »½ĞÑËùÓĞµÈ´ıµÄÏß³Ì
+    // å”¤é†’æ‰€æœ‰ç­‰å¾…çš„çº¿ç¨‹
     _cond.notify_all();
 }
 
-std::unique_ptr<SqlConnection> MysqlPool::GetConnection() {
+std::unique_ptr<SqlConnection> MysqlPool::getConnection() {
     std::unique_lock<std::mutex> lock(_mutex);
-    // µ±PoolÒª¹Ø±Õ »òÕß ¶ÓÁĞÓĞÁ¬½ÓÊ±£¬¼ÌĞøÖ´ĞĞ¡£
+    // å½“Poolè¦å…³é—­ æˆ–è€… é˜Ÿåˆ—æœ‰è¿æ¥æ—¶ï¼Œç»§ç»­æ‰§è¡Œã€‚
     _cond.wait(lock, [this]() {
         return _b_stop ? true : !_pool.empty();
         });
 
-    // Èç¹ûPool¹Ø±Õ£¬·µ»Ønullptr
+    // å¦‚æœPoolå…³é—­ï¼Œè¿”å›nullptr
     if (_b_stop) {
         return nullptr;
     }
 
-    // »ñÈ¡¶ÓÁĞÍ·²¿µÄÁ¬½Ó
+    // è·å–é˜Ÿåˆ—å¤´éƒ¨çš„è¿æ¥
     std::unique_ptr<SqlConnection> con(std::move(_pool.front()));
     _pool.pop();
     return con;
@@ -110,7 +110,7 @@ std::unique_ptr<SqlConnection> MysqlPool::GetConnection() {
 
 MysqlDao::MysqlDao()
 {
-    // »ñÈ¡Êı¾İ¿âÁ¬½ÓĞÅÏ¢£¬³õÊ¼»¯Á¬½Ó³Ø
+    // è·å–æ•°æ®åº“è¿æ¥ä¿¡æ¯ï¼Œåˆå§‹åŒ–è¿æ¥æ± 
     auto& config = ConfigManager::GetInstance();
     const auto& host = config["MySQL"]["Host"];
     const auto& user = config["MySQL"]["User"];
@@ -123,163 +123,47 @@ MysqlDao::MysqlDao()
 
 MysqlDao::~MysqlDao()
 {
-    _pool->Close();
+    _pool->close();
 }
 
-int MysqlDao::RegisterUser(const std::string& name, const std::string& email, const std::string& passwd)
+std::unique_ptr<UserInfo> MysqlDao::getUserInfo(int uid)
 {
-    auto conn = _pool->GetConnection();
-    try {
-        if (conn == nullptr) {
-            _pool->ReturnConnection(std::move(conn));
-            return -1;
-        }
-
-        const Defer defer([this, &conn]() {
-            _pool->ReturnConnection(std::move(conn));
-            });
-
-        // Ö´ĞĞMySQLÃüÁî
-        std::unique_ptr<sql::PreparedStatement> stmt(conn->_con->prepareStatement("CALL reg_user(?,?,?,@result)"));
-        stmt->setString(1, name);
-        stmt->setString(2, email);
-        stmt->setString(3, passwd);
-        stmt->execute();
-
-        // ´´½¨statement²éÑ¯½á¹û
-        std::unique_ptr<sql::Statement> stmtResult(conn->_con->createStatement());
-        std::unique_ptr<sql::ResultSet> rs(stmtResult->executeQuery("select @result AS result"));
-        // ²éÑ¯½á¹û³É¹¦
-        if (rs->next()) {
-            int result = rs->getInt("result");
-            std::cout << "result is " << result << std::endl;
-            return result;
-        }
-        // ²éÑ¯½á¹ûÊ§°Ü
-        return -1;
+	// ä»æ•°æ®åº“æŸ¥è¯¢ç”¨æˆ·åŸºæœ¬ä¿¡æ¯
+    std::unique_ptr<UserInfo> user_info = nullptr;
+    std::unique_ptr<SqlConnection> conn = _pool->getConnection();
+    if (conn == nullptr) {
+        std::cout << "get mysql connection failed." << std::endl;
+        return user_info;
     }
-    catch (sql::SQLException& e) {
-        std::cerr << "SQLException: " << e.what();
-        std::cerr << " (MySQL error code: " << e.getErrorCode();
-        std::cerr << ", SQLState: " << e.getSQLState() << " )" << std::endl;
-        return -1;
-    }
-}
-
-
-
-int MysqlDao::ResetUser(const std::string& email, const std::string& passwd)
-{
-    auto conn = _pool->GetConnection();
-    try {
-        if (conn == nullptr) {
-            _pool->ReturnConnection(std::move(conn));
-            return -1;
-        }
-
-        const Defer defer([this, &conn]() {
-            _pool->ReturnConnection(std::move(conn));
-            });
-
-        // Ö´ĞĞMySQLÃüÁî
-        std::unique_ptr<sql::PreparedStatement> stmt(conn->_con->prepareStatement("CALL reset_user(?,?,@result)"));
-        stmt->setString(1, email);
-        stmt->setString(2, passwd);
-        stmt->execute();
-
-        // ´´½¨statement²éÑ¯½á¹û
-        std::unique_ptr<sql::Statement> stmtResult(conn->_con->createStatement());
-        std::unique_ptr<sql::ResultSet> rs(stmtResult->executeQuery("select @result AS result"));
-        // ²éÑ¯½á¹û³É¹¦
-        if (rs->next()) {
-            int result = rs->getInt("result");
-            std::cout << "result is " << result << std::endl;
-            return result;
-        }
-        // ²éÑ¯½á¹ûÊ§°Ü
-        return -1;
-    }
-    catch (sql::SQLException& e) {
-        std::cerr << "SQLException: " << e.what();
-        std::cerr << " (MySQL error code: " << e.getErrorCode();
-        std::cerr << ", SQLState: " << e.getSQLState() << " )" << std::endl;
-        return -1;
-    }
-}
-
-
-bool MysqlDao::checkPasswd(const std::string& name, const std::string& passwd, UserInfo& user_info) {
-    auto connect = _pool->GetConnection();
-    Defer defer([this, &connect] {
-        _pool->ReturnConnection(std::move(connect));
-        });
-
-    try {
-        if (connect == nullptr) {
-            return false;
-        }
-
-        std::unique_ptr<sql::PreparedStatement> pstmt(
-            connect->_con->prepareStatement("select * from user where name = ? and passwd = ?")
-        );
-        pstmt->setString(1, name);
-        pstmt->setString(2, passwd);
-
-        std::unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-        
-        // if result set is empty, return false
-        if (!res->next()) {
-            std::cout << "password is not matched" << std::endl;
-            return false;
-        }
-
-        user_info.name = res->getString("name");
-        user_info.uid = res->getInt("uid");
-        user_info.email = res->getString("email");
-        user_info.passwd = passwd;
-        return true;
-    }
-
-    catch (sql::SQLException &e) {
-        std::cerr << "SQLException: " << e.what();
-        std::cerr << " (MySQL error code: " << e.getErrorCode();
-        std::cerr << ", SQLState: " << e.getSQLState() << " )" << std::endl;
-        return false;
-    }
-}
-
-
-std::shared_ptr<UserInfo> MysqlDao::getUser(int uid) {
-    auto connect = _pool->GetConnection();
-    Defer defer([this, &connect] {
-        _pool->ReturnConnection(std::move(connect));
+    Defer defer([this, &conn]() {
+        _pool->returnConnection(std::move(conn));
         });
     try {
-        if (connect == nullptr) {
-            throw std::runtime_error("Failed to get MySQL connection");
-        }
         std::unique_ptr<sql::PreparedStatement> pstmt(
-            connect->_con->prepareStatement("select * from user where uid = ?")
-        );
+            conn->_con->prepareStatement("SELECT * from user_info where uid = ?"));
         pstmt->setInt(1, uid);
         std::unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
-        
-		// if result set is empty, return nullptr
-        if (!res->next()) {
-            std::cout << "User not found for uid: " << uid << std::endl;
-			throw std::runtime_error("User not found");
+        if (res->next()) {
+            user_info = std::make_unique<UserInfo>();
+            user_info->uid = res->getInt("uid");
+            user_info->username = res->getString("username");
+            user_info->email = res->getString("email");
+            user_info->passwd = res->getString("passwd");
+            user_info->nickname = res->getString("nickname");
+            user_info->phone = res->getString("phone");
+            user_info->address = res->getString("address");
+            user_info->avatar = res->getString("avatar");
+            user_info->gender = res->getInt("gender");
+            user_info->birthday = res->getString("birthday");
+            user_info->sign = res->getString("personal_signature");
+            user_info->online_status = res->getInt("online_status");
+            user_info->last_login = res->getString("last_login");
+            user_info->register_time = res->getString("register_time");
         }
-        auto user_info = std::make_shared<UserInfo>();
-        user_info->uid = res->getInt("uid");
-        user_info->name = res->getString("name");
-        user_info->email = res->getString("email");
-        user_info->passwd = res->getString("passwd");
-		return user_info;
+        return user_info;
     }
-    catch (sql::SQLException &e) {
-        std::cerr << "SQLException: " << e.what();
-        std::cerr << " (MySQL error code: " << e.getErrorCode();
-        std::cerr << ", SQLState: " << e.getSQLState() << " )" << std::endl;
-        return nullptr;
-    }
+    catch(sql::SQLException& e) {
+        std::cout << "SQL Exception is " << e.what() << std::endl;
+        return user_info;
+	}
 }

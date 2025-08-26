@@ -24,12 +24,6 @@
     <ClInclude Include="Const.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MysqlDao.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="MysqlManager.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="RedisManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -51,12 +45,6 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="ConfigManager.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MysqlDao.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="MysqlManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="RedisManager.cpp">
@@ -86,12 +74,6 @@
       <Filter>资源文件</Filter>
     </None>
     <None Include="message.proto">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="mysqlcppconn8-2-vs14.dll">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="mysqlcppconn-9-vs14.dll">
       <Filter>资源文件</Filter>
     </None>
     <None Include="redis++.dll">

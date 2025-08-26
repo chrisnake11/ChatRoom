@@ -27,10 +27,10 @@ class SendNode : public MsgNode {
 public:
 	SendNode(const char* msg, int max_length, int msg_id):
 		MsgNode(max_length + HEAD_TOTAL_LENGTH), _msg_id(msg_id){
-		// ·¢ËÍÇ°½«Í·²¿Êı¾İ×ª»¯Îª´ó¶ËĞò¡£
+		// å‘é€å‰å°†å¤´éƒ¨æ•°æ®è½¬åŒ–ä¸ºå¤§ç«¯åºã€‚
 		short host_msg_id = boost::asio::detail::socket_ops::host_to_network_short(_msg_id);
 		memcpy(_data, &host_msg_id, HEAD_ID_LENGTH);
-		short host_max_length = boost::asio::detail::socket_ops::host_to_network_short(_total_length);
+		short host_max_length = boost::asio::detail::socket_ops::host_to_network_short(max_length);
 		memcpy(_data + HEAD_ID_LENGTH, &host_max_length, HEAD_DATA_LENGTH);
 		memcpy(_data + HEAD_TOTAL_LENGTH, msg, max_length);
 	}

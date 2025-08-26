@@ -1,6 +1,8 @@
 # ChatRoom Project .gitignore
 # 适用于 C++ Visual Studio + Qt + Node.js 混合项目
 
+ChatRoom/
+
 #######################
 # Visual Studio
 #######################

@@ -178,7 +178,7 @@ bool LogicSystem::getBaseInfo(std::string base_key, int uid, std::shared_ptr<Use
 	// 从Mysql查询用户基本信息
 	else {
 		std::shared_ptr<UserInfo> tmp_user_info = nullptr;
-		tmp_user_info = MysqlManager::getInstance()->getUser(uid);
+		tmp_user_info = MysqlManager::getInstance()->getUserById(uid);
 		if(tmp_user_info == nullptr) {
 			// 用户不存在
 			return false;

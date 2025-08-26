@@ -25,13 +25,13 @@ int main()
 		RedisManager::getInstance()->HSet(LOGIN_COUNT, server_name, "0");
 
         // define grpc server
-		std::string grpc_server_address(config["SelfServer"]["Host"] + ":" + config["SelfServer"]["Port"]);
+		std::string grpc_server_address(config["SelfServer"]["Host"] + ":" + config["SelfServer"]["RPCPort"]);
         ChatServiceImpl service;
         grpc::ServerBuilder builder;
 		builder.AddListeningPort(grpc_server_address, grpc::InsecureServerCredentials());
 		builder.RegisterService(&service);
 		std::unique_ptr<grpc::Server> grpc_server(builder.BuildAndStart());
-		std::cout << "Chat Server listening on " << grpc_server_address << std::endl;
+		std::cout << "Chat grpc-server listening on " << grpc_server_address << std::endl;
 
         // start a thread run grpc server
         std::thread grpc_server_thread([&grpc_server]() {
@@ -46,6 +46,8 @@ int main()
 			// 优雅退出grpc server
             grpc_server->Shutdown();
             });
+
+        // cserver port
         auto port_str = config["SelfServer"]["Port"];
         CServer server(io_context, atoi(port_str.c_str()));
         io_context.run();

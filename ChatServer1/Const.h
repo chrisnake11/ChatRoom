@@ -36,6 +36,7 @@ enum ErrorCodes {
 	ERROR_PASSWORD_INVALID = 1009, // 密码无效 
 	ERROR_UID_INVALID = 1010, // 用户ID无效
 	ERROR_TOKEN_INVALID = 1011, // token无效
+	ERROR_LOAD_USERINFO_FAILED = 1012, // 用户登录失败
 };
 
 const std::string CODEPREFIX = "code_";

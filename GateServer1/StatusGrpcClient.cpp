@@ -31,7 +31,7 @@ LoginRsp StatusGrpcClient::Login(int uid, const std::string& token)
 
 	auto stub = _pool->getConnection();
 
-	// 向StatusServer验证uid和token
+	// 鍚慡tatusServer楠岃瘉uid鍜宼oken
 	Status status = stub->Login(&context, request, &reply);
 
 	Defer defer([&stub, this]() {
