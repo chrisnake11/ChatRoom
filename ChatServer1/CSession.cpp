@@ -188,7 +188,7 @@ void CSession::send(const char* msg, short max_length, short msg_id) {
 		return;
 	}
 	auto& send_node = _send_queue.front();
-	std::cout << "csession send_node: " << send_node->_data << std::endl;
+	std::cout << "csession send_node, msg_id: " << send_node->_msg_id << " data: " << send_node->_data << std::endl;
 	boost::asio::async_write(_socket, boost::asio::buffer(send_node->_data, send_node->_total_length), 
 		std::bind(&CSession::handleWrite, this, std::placeholders::_1, shared_from_this()));
 }
@@ -197,12 +197,6 @@ void CSession::send(const std::string& msg, short msg_id) {
 	// 使用 c_str() 转换为 const char*
 	send(msg.c_str(), static_cast<short>(msg.length()), msg_id);
 }
-
-// 支持移动语义的重载（C++11及以上）
-void CSession::send(std::string&& msg, short msg_id) {
-	send(msg.c_str(), static_cast<short>(msg.length()), msg_id);
-}
-
 
 LogicNode::LogicNode(std::shared_ptr<CSession> session, std::shared_ptr<RecvNode> recv_node): _session(session), _recv_node(recv_node)
 {

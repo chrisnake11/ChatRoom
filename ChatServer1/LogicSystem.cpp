@@ -4,6 +4,7 @@
 #include "MysqlManager.h"
 #include "RedisManager.h"
 #include "UserManager.h"
+#include "Utils.h"
 
 LogicSystem::LogicSystem() : _b_stop(false) {
 	registerHandler();
@@ -77,8 +78,136 @@ void LogicSystem::postMsgToQueue(std::shared_ptr<LogicNode> node) {
 
 void LogicSystem::registerHandler()
 {
-	_handlers[MSG_CHAT_LOGIN_REQ] = std::bind(&LogicSystem::loginHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+	_handlers[MSG_ID::MSG_CHAT_LOGIN] = std::bind(&LogicSystem::loginHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+	_handlers[MSG_ID::MSG_LOGOUT] = std::bind(&LogicSystem::logoutHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+	_handlers[MSG_ID::MSG_GET_MESSAGE_LIST] = std::bind(&LogicSystem::messageListHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 }
+
+void LogicSystem::messageListHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data) {
+	// 获取用户的所有朋友消息
+	Json::Reader reader;
+	Json::Value root;
+	// 定义返回的Json对象
+	Json::Value return_root;
+	// 函数退出时，发送返回return_root
+	Defer defer([this, &return_root, session]() {
+		std::string return_str = return_root.toStyledString();
+		// 调用session发送消息,消息码 MSG_GET_MESSAGE_LIST = 1007
+		session->send(return_str, MSG_GET_MESSAGE_LIST);
+		});
+
+    if (!reader.parse(msg_data, root)) {
+		std::cout << "parse json failed" << std::endl;
+		return;
+	}
+	std::cout << "get message list request " << std::endl;
+	
+	int uid = root["uid"].asInt();
+	// 验证用户token
+	std::string token_key = USER_TOKEN + root["uid"].asString();
+	std::string token_value = "";
+	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
+
+	// token验证错误
+	if (!get_token_success) {
+		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
+		std::cerr << "redis get token failed" << std::endl;
+	}
+	if (token_value != root["token"].asString()) {
+		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
+		std::cerr << "token invalid" << std::endl;
+	}
+
+	// token验证成功
+	return_root["error"] = ErrorCodes::SUCCESS;
+
+	// 从redis中获取列表信息
+    std::string list_key = USER_MESSAGE_LIST + std::to_string(uid);
+	std::string list_value = "";
+	std::unique_ptr<std::vector<MessageItem>> message_list = getMessageList(list_key, uid);
+
+	// 创建 JSON 数组
+	Json::Value list_root(Json::arrayValue);  
+
+	if (!message_list) {
+		return_root["error"] = ErrorCodes::ERROR_LOAD_FRIEND_INFO_FAILED;
+		std::cerr << "ERROR_LOAD_FRIEND_INFO_FAILED" << std::endl;
+	}
+
+	for (const auto& item : *message_list) {
+		Json::Value json_item;
+		json_item["uid"] = item.uid;
+		json_item["nickname"] = item.nickname;
+		json_item["avatar"] = item.avatar;
+		json_item["message"] = item.message;
+		json_item["last_message_time"] = item.last_message_time;
+		json_item["unread_count"] = item.unread_count;
+		list_root.append(json_item);
+	}
+
+	// 将message数组添加到返回Json中
+	return_root["message_list"] = list_root;
+}
+
+std::unique_ptr<std::vector<MessageItem>> LogicSystem::getMessageList(std::string list_key, int uid) {
+    std::string list_value = "";
+	bool success = RedisManager::getInstance()->Get(list_key, list_value);
+	Json::Reader list_reader;
+	Json::Value list_root;
+	std::unique_ptr<std::vector<MessageItem>> list_ptr = std::make_unique<std::vector<MessageItem>>();
+	// 缓存命中
+	if (success) {
+		if (!list_reader.parse(list_value, list_root)) {
+            std::cout << "parse json failed" << std::endl;
+		}
+        for (const Json::Value& item : list_root) {
+			MessageItem msg;
+			msg.uid = item["uid"].asInt();
+			msg.nickname = item["nickname"].asString();
+			msg.avatar = item["avatar"].asString();
+            msg.message = item["message"].asString();
+            msg.last_message_time = item["last_message_time"].asString();
+            msg.unread_count = item["unread_count"].asInt();
+            list_ptr->emplace_back(msg);
+        }
+	}
+	// 去MySQL中获取列表信息
+	else {
+		// 获取uid对应的所有消息列表
+		list_ptr = MysqlManager::getInstance()->getMessageList(uid);
+
+		if (list_ptr == nullptr) {
+			std::cerr << " MySQL get uid " << uid << " message list failed" << std::endl;
+			return nullptr;
+		}
+		
+		// 添加到Redis缓存
+		Json::Value root;
+        for (const auto& item : *list_ptr) {
+            root.append(Json::Value(Json::objectValue));
+            root[root.size() - 1]["uid"] = item.uid;
+            root[root.size() - 1]["avatar"] = item.avatar;
+            root[root.size() - 1]["nickname"] = item.nickname;
+            root[root.size() - 1]["message"] = item.message;
+            root[root.size() - 1]["last_message_time"] = item.last_message_time;
+			root[root.size() - 1]["unread_count"] = item.unread_count;
+        }
+		RedisManager::getInstance()->Set(list_key, root.toStyledString());
+	}
+	return std::move(list_ptr);
+}
+
+void LogicSystem::logoutHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& user_id) {
+	int uid = std::atoi(user_id.c_str());
+	// 更新用户登录状态
+	int res = MysqlManager::getInstance()->updateLoginStatus(uid, 0, "");
+	if (res <= 0) {
+		std::cout << "log out failed" << std::endl;
+		return;
+	}
+	std::cout << "user uid: " << uid << " log out" << std::endl;
+}
+
 
 void LogicSystem::loginHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data) {
 	
@@ -93,7 +222,8 @@ void LogicSystem::loginHandler(std::shared_ptr<CSession> session, const short& m
 	Json::Value return_root;
 	Defer defer([this, &return_root, session]() {
 		std::string return_str = return_root.toStyledString();
-		session->send(return_str, MSG_CHAT_LOGIN_RSP);
+		// 调用session发送消息,消息码 MSG_CHAT_LOGIN = 1005
+		session->send(return_str, MSG_CHAT_LOGIN);
 		});
 
 	// 从Redis查询用户token是否有效
@@ -123,6 +253,14 @@ void LogicSystem::loginHandler(std::shared_ptr<CSession> session, const short& m
 		return;
 	}
 
+	// 更新登录状态和最后登录时间（同步MySQL和Redis）
+	std::string current_time = getDateTimeStr();
+	if (MysqlManager::getInstance()->updateLoginStatus(uid, 1, current_time)) {
+		// 如果更新成功，则更新Redis中用户信息
+		RedisManager::getInstance()->HSet(base_key, "online_status", "1");
+		RedisManager::getInstance()->HSet(base_key, "last_login", current_time);
+	}
+
 	// 将用户信息添加到Json结果中。
 	Json::Value user_json;
 	UserInfo::convertToJson(user_info, user_json);
@@ -133,9 +271,6 @@ void LogicSystem::loginHandler(std::shared_ptr<CSession> session, const short& m
 	return_root["uid"] = root["uid"];
 	return_root["token"] = root["token"];
 
-
-	// 从数据库获取好友申请列表
-	// 从数据库获取好友列表
 
 	// 更新redis中，ChatRoom的连接数量
 	auto server_name = ConfigManager::GetInstance()["SelfServer"]["Name"];
@@ -161,11 +296,6 @@ void LogicSystem::loginHandler(std::shared_ptr<CSession> session, const short& m
 	UserManager::getInstance()->setUserSession(uid, session);
 
 	std::cout << "LogicSystem return_root user_info: " << return_root.toStyledString() << std::endl;
-
-	// Session发送TCP响应数据
-    session->send(return_root.toStyledString(), MSG_ID::MSG_CHAT_LOGIN_RSP);
-
-	return;
 }
 
 std::unique_ptr<UserInfo> LogicSystem::getUserInfo(std::string base_key, int uid) {
@@ -174,7 +304,9 @@ std::unique_ptr<UserInfo> LogicSystem::getUserInfo(std::string base_key, int uid
 	bool success = RedisManager::getInstance()->Get(base_key, base_value);
 	Json::Value root;
 	Json::Reader reader;
+	// 缓存命中
 	if (success) {
+		// 解析Json
         if (reader.parse(base_value, root)) {
 			std::unique_ptr<UserInfo> user_info = std::make_unique<UserInfo>();
 			UserInfo::loadFromJson(user_info, root);

@@ -6,7 +6,11 @@
 #include <mutex>
 #include <queue>
 #include <unordered_map>
+#include <memory>
+#include <vector>
 #include "Data.h"
+
+
 class CSession;
 class LogicNode;
 
@@ -24,6 +28,13 @@ private:
 
 	// 登录逻辑处理
 	void loginHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
+	// 登出逻辑处理
+	void logoutHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& user_id);
+	// 获取联系人列表
+	void messageListHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
+
+	// 获取消息列表
+	std::unique_ptr<std::vector<MessageItem>> getMessageList(std::string list_key, int uid);
 
 	// 从redis中获取用户信息，或在MySQL中获取缓存到Redis中，读取到user_info
 	// base_key为redis_key

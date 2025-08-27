@@ -15,6 +15,7 @@
 #include <memory>
 #include "ConfigManager.h"
 #include "Data.h"
+#include <vector>
 
 
 class SqlConnection {
@@ -57,6 +58,12 @@ public:
     ~MysqlDao();
 
 	std::unique_ptr<UserInfo> getUserInfo(int uid);
+
+    // 更新用户登录状态和最后登录时间，如果登陆时间为空，则不更新时间。
+    int updateLoginStatus(int uid, int status, const std::string& last_login);
+
+    // 获取用户所有的聊天消息，以数组的形式返回
+    std::unique_ptr<std::vector<MessageItem>> getMessageList(int uid);
 
 private:
     std::unique_ptr<MysqlPool> _pool;

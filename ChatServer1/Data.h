@@ -12,7 +12,7 @@ struct BaseUserInfo {
 
 struct UserInfo : public BaseUserInfo {
 public:
-	UserInfo() : BaseUserInfo(),avatar(""), sign(""), nickname(""), gender(0), birthday(""), phone(""), address(""), online_status(0), last_login(""), register_time("") {}
+	UserInfo();
 	std::string nickname; // 昵称
 	std::string phone; // 电话
 	std::string address; // 地址
@@ -28,6 +28,19 @@ public:
 	static void loadFromJson(std::unique_ptr<UserInfo>& user_info, const Json::Value& root);
 	// UserInfo转Json
 	static void convertToJson(std::unique_ptr<UserInfo>& user_info, Json::Value& root);
+};
+
+// 聊天消息
+struct MessageItem {
+	MessageItem() : uid(0), unread_count(0) {}
+	MessageItem(int uid, const std::string& nickname, const std::string& avatar, const std::string& message, const std::string& last_message_time, const int& unread_count)
+		: uid(uid), nickname(nickname), avatar(avatar), message(message), last_message_time(last_message_time), unread_count(unread_count) {}
+	int uid;
+	std::string nickname;
+	std::string avatar;
+	std::string message;
+	std::string last_message_time;
+	int unread_count;
 };
 
 struct AddFriendInfo {

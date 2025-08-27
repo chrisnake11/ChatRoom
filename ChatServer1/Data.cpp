@@ -1,6 +1,7 @@
 #include "Data.h"
-#include <json/value.h>
 #include <iostream>
+
+UserInfo::UserInfo() : BaseUserInfo(), avatar(""), sign(""), nickname(""), gender(0), birthday(""), phone(""), address(""), online_status(0), last_login(""), register_time("") {}
 
 void UserInfo::loadFromJson(std::unique_ptr<UserInfo>& user_info, const Json::Value& root)
 {

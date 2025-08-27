@@ -167,3 +167,80 @@ std::unique_ptr<UserInfo> MysqlDao::getUserInfo(int uid)
         return user_info;
 	}
 }
+
+int MysqlDao::updateLoginStatus(int uid, int status, const std::string& last_login) {
+    auto conn = _pool->getConnection();
+    Defer defer([this, &conn]() {
+        _pool->returnConnection(std::move(conn));
+        });
+    if (conn == nullptr) {
+        std::cout << "get mysql connection failed." << std::endl;
+        return -1;
+    }
+    try {
+        if (!last_login.empty()) {
+            std::unique_ptr<sql::PreparedStatement> pstmt(
+                conn->_con->prepareStatement("UPDATE user_info SET online_status = ?, last_login = ? WHERE uid = ?"));
+            pstmt->setInt(1, status);
+            pstmt->setString(2, last_login);
+            pstmt->setInt(3, uid);
+            return pstmt->executeUpdate();
+        }
+        else {
+            std::unique_ptr<sql::PreparedStatement> pstmt(
+                conn->_con->prepareStatement("UPDATE user_info SET online_status = ? WHERE uid = ?"));
+            pstmt->setInt(1, status);
+            pstmt->setInt(2, uid);
+            return pstmt->executeUpdate();
+        }
+        
+    }
+    catch (std::exception& e) {
+        std::cout << "SQL Exception is " << e.what() << std::endl;
+        return -1;
+    }
+}
+
+std::unique_ptr<std::vector<MessageItem>> MysqlDao::getMessageList(int uid) {
+    auto conn = _pool->getConnection();
+    Defer defer([this, &conn]() {
+        _pool->returnConnection(std::move(conn));
+        });
+
+    if (conn == nullptr) {
+        std::cout << "get mysql connection failed." << std::endl;
+        return nullptr;
+    }
+
+    try {
+        std::string query_str = "SELECT fr.friend_id, fr.last_message_id, fr.unread_count, msg.content, msg.timestamp, ui.nickname, ui.avatar "
+            "FROM friend_relationship fr LEFT JOIN message msg "
+            "ON fr.last_message_id = msg.message_id "
+            "LEFT JOIN user_info ui "
+            "ON fr.friend_id = ui.id "
+            "WHERE fr.user_id = ?";
+        std::unique_ptr<sql::PreparedStatement> pstmt(
+            conn->_con->prepareStatement(query_str));
+        pstmt->setInt(1, uid);
+        std::unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+        std::unique_ptr<std::vector<MessageItem>> message_list = std::make_unique<std::vector<MessageItem>>();
+        while (res->next()) {
+            // 将结果添加到message_list中
+            MessageItem message_item;
+            message_item.uid = res->getInt("friend_id");
+            message_item.nickname = res->getString("nickname");
+            message_item.avatar = res->getString("avatar");
+            message_item.message = res->getString("content");
+            message_item.last_message_time = res->getString("timestamp");
+            message_item.unread_count = res->getInt("unread_count");
+            message_list->emplace_back(message_item);
+            /*message_list->emplace_back(res->getInt("friend_id"), res->getString("nickname"), res->getString("avatar")
+                , res->getString("message"), res->getString("timestamp"), res->getInt("unread_count"));*/
+        }
+        return std::move(message_list);
+    }
+    catch (std::exception& e) {
+        std::cerr << "query message liss failed, SQL exception is: " << e.what() << std::endl;
+        return nullptr;
+    }
+}

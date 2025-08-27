@@ -160,6 +160,7 @@
     <ClInclude Include="RedisManager.h" />
     <ClInclude Include="Singleton.h" />
     <ClInclude Include="UserManager.h" />
+    <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="config.ini" />

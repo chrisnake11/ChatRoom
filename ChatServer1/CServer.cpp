@@ -55,6 +55,9 @@ void CServer::handleAccept(std::shared_ptr<CSession> new_session, const boost::s
 	else {
 		std::cout << "session accept failed, error is: " << error.what() << std::endl;
 	}
+
+	// 继续接收连接
+	startAccept();
 }
 
 void CServer::clearSession(std::string session_id) {
