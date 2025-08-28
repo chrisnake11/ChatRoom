@@ -90,8 +90,9 @@ enum MSG_ID {
 	MSG_CHAT_LOGIN = 1005, // 登录请求
 	MSG_LOGOUT = 1006, // 登出
 	MSG_GET_MESSAGE_LIST = 1007, // 获取消息列表
-	MSG_GET_CONTACT_LIST = 1008, // 获取联系人列表
-	MSG_GET_CHAT_MESSAGE = 1009, // 获取聊天消息
+	MSG_GET_CHAT_MESSAGE = 1008, // 获取聊天消息
+	MSG_GET_CONTACT_LIST = 1009, // 获取联系人列表
+	MSG_GET_CONTACT_INFO = 1010, // 获取联系人信息
 };
 
 // redis前缀 key

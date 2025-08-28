@@ -81,6 +81,109 @@ void LogicSystem::registerHandler()
 	_handlers[MSG_ID::MSG_CHAT_LOGIN] = std::bind(&LogicSystem::loginHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 	_handlers[MSG_ID::MSG_LOGOUT] = std::bind(&LogicSystem::logoutHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 	_handlers[MSG_ID::MSG_GET_MESSAGE_LIST] = std::bind(&LogicSystem::messageListHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+	_handlers[MSG_ID::MSG_GET_CONTACT_LIST] = std::bind(&LogicSystem::contactListHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+}
+
+void LogicSystem::contactListHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data) {
+	Json::Reader reader;
+	Json::Value root;
+	Json::Value return_root;
+	Defer defer([this, &return_root, session, &msg_id] {
+		std::string return_str = return_root.toStyledString();
+		// 调用session发送消息,消息码 MSG_GET_CONTACT_LIST = 1009
+		session->send(return_str, msg_id);
+		});
+
+	if (!reader.parse(msg_data, root)) {
+		std::cout << "parse json failed" << std::endl;
+		return;
+	}
+	std::cout << "get contact list request " << std::endl;
+
+	int uid = root["uid"].asInt();
+	// 验证用户token
+	std::string token_key = USER_TOKEN + root["uid"].asString();
+	std::string token_value = "";
+	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
+
+	// token验证错误
+	if (!get_token_success) {
+		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
+		std::cerr << "redis get token failed" << std::endl;
+	}
+	if (token_value != root["token"].asString()) {
+		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
+		std::cerr << "token invalid" << std::endl;
+	}
+
+	// token验证成功
+	return_root["error"] = ErrorCodes::SUCCESS;
+	std::string list_key = USER_CONTACT_LIST + root["uid"].asString();
+	std::unique_ptr<std::vector<ContactItem>> contact_list = getContactList(list_key, uid);
+
+	// 列表查询失败
+	if (contact_list == nullptr) {
+		return_root["error"] = ErrorCodes::ERROR_LOAD_FRIEND_INFO_FAILED;
+		std::cerr << "ERROR_LOAD_FRIEND_CONTACT_INFO_FAILED" << std::endl;
+		return;
+	}
+	
+	// 添加联系人数组到Json数据中
+	return_root["contact_list"] = Json::arrayValue;
+    for (auto& item : (*contact_list)) { 
+		Json::Value item_root;
+        item_root["uid"] = item.uid;
+        item_root["nickname"] = item.nickname;
+        item_root["avatar"] = item.avatar;
+        item_root["sign"] = item.sign;
+        item_root["online_status"] = item.online_status;
+        return_root["contact_list"].append(item_root);
+	}
+
+
+}
+
+std::unique_ptr<std::vector<ContactItem>> LogicSystem::getContactList(const std::string& token_key, const int& uid) {
+	std::string list_value = "";
+	Json::Reader list_reader;
+	Json::Value list_root;
+	std::unique_ptr<std::vector<ContactItem>> list_ptr = std::make_unique<std::vector<ContactItem>>();
+	bool success = RedisManager::getInstance()->Get(token_key, list_value);
+	if (success) {
+		if (!list_reader.parse(list_value, list_root)) {
+			std::cout << "parse json failed" << std::endl;
+		}
+		for (const Json::Value& item : list_root) {
+			ContactItem item_data;
+			item_data.uid = item["uid"].asInt();
+            item_data.nickname = item["nickname"].asString();
+            item_data.avatar = item["avatar"].asString();
+            item_data.sign = item["sign"].asString();
+			item_data.online_status = item["online_status"].asInt();
+			list_ptr->push_back(item_data);
+		}
+	}
+	else {
+		// 从MySQL获取列表
+		list_ptr = MysqlManager::getInstance()->getContactList(uid);
+		if (list_ptr == nullptr) {
+			std::cout << "MySQL get contact list uid: " << uid << " failed. " << std::endl;
+			return nullptr;
+		}
+
+		// 存储到Redis
+		Json::Value root = root;
+		for (auto& item : *(list_ptr)) {
+			root.append(Json::Value(Json::objectValue));
+			root[root.size() - 1]["uid"] = item.uid;
+			root[root.size() - 1]["nickname"] = item.nickname;
+            root[root.size() - 1]["avatar"] = item.avatar;
+            root[root.size() - 1]["sign"] = item.sign;
+            root[root.size() - 1]["online_status"] = item.online_status;
+		}
+		RedisManager::getInstance()->Set(token_key, root.toStyledString());
+	}
+	return std::move(list_ptr);
 }
 
 void LogicSystem::messageListHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data) {
@@ -90,10 +193,10 @@ void LogicSystem::messageListHandler(std::shared_ptr<CSession> session, const sh
 	// 定义返回的Json对象
 	Json::Value return_root;
 	// 函数退出时，发送返回return_root
-	Defer defer([this, &return_root, session]() {
+	Defer defer([this, &return_root, session, &msg_id]() {
 		std::string return_str = return_root.toStyledString();
 		// 调用session发送消息,消息码 MSG_GET_MESSAGE_LIST = 1007
-		session->send(return_str, MSG_GET_MESSAGE_LIST);
+		session->send(return_str, msg_id);
 		});
 
     if (!reader.parse(msg_data, root)) {
@@ -123,17 +226,17 @@ void LogicSystem::messageListHandler(std::shared_ptr<CSession> session, const sh
 
 	// 从redis中获取列表信息
     std::string list_key = USER_MESSAGE_LIST + std::to_string(uid);
-	std::string list_value = "";
 	std::unique_ptr<std::vector<MessageItem>> message_list = getMessageList(list_key, uid);
-
-	// 创建 JSON 数组
-	Json::Value list_root(Json::arrayValue);  
 
 	if (!message_list) {
 		return_root["error"] = ErrorCodes::ERROR_LOAD_FRIEND_INFO_FAILED;
-		std::cerr << "ERROR_LOAD_FRIEND_INFO_FAILED" << std::endl;
+		std::cerr << "ERROR_LOAD_FRIEND_MESSAGE_INFO_FAILED" << std::endl;
+		return;
 	}
 
+	// 创建 JSON 数组
+	return_root["message_list"] = Json::arrayValue;
+	// 将message数组添加到返回Json中
 	for (const auto& item : *message_list) {
 		Json::Value json_item;
 		json_item["uid"] = item.uid;
@@ -142,11 +245,9 @@ void LogicSystem::messageListHandler(std::shared_ptr<CSession> session, const sh
 		json_item["message"] = item.message;
 		json_item["last_message_time"] = item.last_message_time;
 		json_item["unread_count"] = item.unread_count;
-		list_root.append(json_item);
+		return_root["message_list"].append(json_item);
 	}
 
-	// 将message数组添加到返回Json中
-	return_root["message_list"] = list_root;
 }
 
 std::unique_ptr<std::vector<MessageItem>> LogicSystem::getMessageList(std::string list_key, int uid) {

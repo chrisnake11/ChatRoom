@@ -33,7 +33,7 @@ public:
 // 聊天消息
 struct MessageItem {
 	MessageItem() : uid(0), unread_count(0) {}
-	MessageItem(int uid, const std::string& nickname, const std::string& avatar, const std::string& message, const std::string& last_message_time, const int& unread_count)
+	MessageItem(const int& uid, const std::string& nickname, const std::string& avatar, const std::string& message, const std::string& last_message_time, const int& unread_count)
 		: uid(uid), nickname(nickname), avatar(avatar), message(message), last_message_time(last_message_time), unread_count(unread_count) {}
 	int uid;
 	std::string nickname;
@@ -41,6 +41,17 @@ struct MessageItem {
 	std::string message;
 	std::string last_message_time;
 	int unread_count;
+};
+
+struct ContactItem {
+	ContactItem() : uid(0), online_status(0) {}
+	ContactItem(const int& uid, const std::string& nickname, const std::string& avatar, const std::string& sign, const int& online_status):
+	uid(uid), nickname(nickname), avatar(avatar), sign(sign), online_status(online_status){ }
+	int uid;	
+	std::string nickname;
+	std::string avatar;
+	std::string sign;
+	int online_status;
 };
 
 struct AddFriendInfo {

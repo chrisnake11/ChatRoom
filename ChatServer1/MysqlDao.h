@@ -64,6 +64,8 @@ public:
 
     // 获取用户所有的聊天消息，以数组的形式返回
     std::unique_ptr<std::vector<MessageItem>> getMessageList(int uid);
+    // 获取联系人列表，以数组的形式返回
+    std::unique_ptr<std::vector<ContactItem>> getContactList(int uid);
 
 private:
     std::unique_ptr<MysqlPool> _pool;

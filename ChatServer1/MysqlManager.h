@@ -13,6 +13,7 @@ public:
 	std::unique_ptr<UserInfo> getUserInfo(int uid);
 	int updateLoginStatus(int uid, int status, const std::string& last_login);
 	std::unique_ptr<std::vector<MessageItem>> getMessageList(int uid);
+	std::unique_ptr<std::vector<ContactItem>> getContactList(int uid);
 private:
 	MysqlManager();
 	MysqlDao _dao;

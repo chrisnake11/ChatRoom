@@ -33,7 +33,7 @@ enum ErrorCodes {
 	ERROR_PASSWORD_WRONG = 1006, // 密码错误
 	ERROR_EMAIL_NOT_MATCH = 1007, // 邮箱不匹配
 	ERROR_PASSWORD_UPDATE_FAILED = 1008, // 密码更新失败
-	ERROR_PASSWORD_INVALID = 1009, // 密码无效 
+	ERROR_PASSWORD_INVALID = 1009, // 密码无效
 };
 
 const std::string CODEPREFIX = "code_";

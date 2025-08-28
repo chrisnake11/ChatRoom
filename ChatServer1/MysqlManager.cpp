@@ -27,3 +27,8 @@ std::unique_ptr<std::vector<MessageItem>> MysqlManager::getMessageList(int uid)
 {
 	return _dao.getMessageList(uid);
 }
+
+std::unique_ptr<std::vector<ContactItem>> MysqlManager::getContactList(int uid)
+{
+	return _dao.getContactList(uid);
+}

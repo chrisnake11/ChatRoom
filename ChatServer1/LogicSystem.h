@@ -30,11 +30,16 @@ private:
 	void loginHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
 	// 登出逻辑处理
 	void logoutHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& user_id);
-	// 获取联系人列表
+	// 获取消息列表
 	void messageListHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
+	// 获取联系人列表
+	void contactListHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
+
 
 	// 获取消息列表
 	std::unique_ptr<std::vector<MessageItem>> getMessageList(std::string list_key, int uid);
+	// 获取联系人列表
+	std::unique_ptr<std::vector<ContactItem>> getContactList(const std::string& token_key, const int& uid);
 
 	// 从redis中获取用户信息，或在MySQL中获取缓存到Redis中，读取到user_info
 	// base_key为redis_key

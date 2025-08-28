@@ -218,7 +218,7 @@ std::unique_ptr<std::vector<MessageItem>> MysqlDao::getMessageList(int uid) {
             "ON fr.last_message_id = msg.message_id "
             "LEFT JOIN user_info ui "
             "ON fr.friend_id = ui.id "
-            "WHERE fr.user_id = ?";
+            "WHERE fr.user_id = ? and fr.friend_status = 0";
         std::unique_ptr<sql::PreparedStatement> pstmt(
             conn->_con->prepareStatement(query_str));
         pstmt->setInt(1, uid);
@@ -241,6 +241,37 @@ std::unique_ptr<std::vector<MessageItem>> MysqlDao::getMessageList(int uid) {
     }
     catch (std::exception& e) {
         std::cerr << "query message liss failed, SQL exception is: " << e.what() << std::endl;
+        return nullptr;
+    }
+}
+
+std::unique_ptr<std::vector<ContactItem>> MysqlDao::getContactList(int uid) {
+    auto conn = _pool->getConnection();
+    Defer defer([this, &conn]() {
+        _pool->returnConnection(std::move(conn));
+        });
+    if (conn == nullptr) {
+        std::cout << "get mysql connection failed." << std::endl;
+        return nullptr;
+    }
+    try {
+        std::unique_ptr<std::vector<ContactItem>> contact_list = std::make_unique<std::vector<ContactItem>>();
+        std::string query_str = "SELECT fr.friend_id, ui.nickname, ui.avatar, ui.personal_signature, ui.online_status "
+            "FROM friend_relationship fr LEFT JOIN user_info ui "
+            "ON fr.friend_id = ui.id "
+            "WHERE fr.user_id = ? and fr.friend_status = 0";
+        std::unique_ptr<sql::PreparedStatement> pstmt(
+            conn->_con->prepareStatement(query_str));
+        pstmt->setInt(1, uid);
+        std::unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+        while (res->next()) {
+            contact_list->emplace_back(res->getInt("friend_id"), res->getString("nickname"), res->getString("avatar")
+                , res->getString("personal_signature"), res->getInt("online_status"));
+        }
+        return std::move(contact_list);
+    }
+    catch (std::exception& e) {
+        std::cout << "SQL Exception is " << e.what() << std::endl;
         return nullptr;
     }
 }
