@@ -49,8 +49,6 @@ public:
 	// send data
 	void send(const char* msg, short max_length, short msg_id);
 	void send(const std::string& msg, short msg_id);
-	// 支持右值引用，临时字符串对象传递。
-	void send(std::string&& msg, short msg_id);
 
 private:
 	// 解析完整的数据包(head + body)

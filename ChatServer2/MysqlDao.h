@@ -1,54 +1,8 @@
 #pragma once
-#include "Const.h"
-#include <queue>
-#include <mutex>
-#include <condition_variable>
-#include <string>
-#include <atomic>
-#include <thread>
-#include <jdbc/mysql_driver.h>
-#include <jdbc/mysql_connection.h>
-#include <jdbc/cppconn/prepared_statement.h>
-#include <jdbc/cppconn/resultset.h>
-#include <jdbc/cppconn/statement.h>
-#include <jdbc/cppconn/exception.h>
+#include <vector>
 #include <memory>
-#include "ConfigManager.h"
 #include "Data.h"
-
-
-class SqlConnection {
-public:
-    SqlConnection(sql::Connection* con, int64_t last_time) :_con(con), _last_time(last_time) {}
-    std::unique_ptr<sql::Connection> _con;
-    int64_t _last_time;
-};
-
-class MysqlPool
-{
-public:
-    MysqlPool(const std::string& url, const std::string& user, const std::string& passwd,
-        const std::string& schema, std::size_t pool_size);
-    std::unique_ptr<SqlConnection> getConnection();
-    void returnConnection(std::unique_ptr<SqlConnection> conn);
-    void checkConnection();
-    void close();
-    ~MysqlPool();
-
-private:
-    std::string _url;
-    std::string _user;
-    std::string _passwd;
-    std::string _schema;
-    std::size_t _pool_size;
-    std::queue<std::unique_ptr<SqlConnection>> _pool;
-    std::mutex _mutex;
-    std::condition_variable _cond;
-    std::atomic<bool> _b_stop;
-
-    std::thread _check_thread;
-};
-
+#include <jdbc/mysql_connection.h>
 
 // 封装与MySQL数据库的操作
 class MysqlDao {
@@ -56,28 +10,31 @@ public:
     MysqlDao();
     ~MysqlDao();
 
-    bool existUserByName(const std::string& username);
-    bool existUserByEmail(const std::string& email);
-    
-	// 更新user_id表中的最大用户ID，返回更新后的用户ID
-	int updateUserId();
-	// 获取user_id表中的最大用户ID
-	int getMaxUserId();
+    // Dao层接收sql::Connection裸指针，操作不涉及指针delete。
+	std::unique_ptr<UserInfo> getUserInfo(int uid, sql::Connection* conn);
 
-	// 创建用户信息到user_info表，返回主键id
-	int createBaseUserInfo(const BaseUserInfo& user_info);
-    int createUserInfo(const UserInfo& user_info);
+    // 更新用户登录状态和最后登录时间，如果登陆时间为空，则不更新时间。
+    int updateLoginStatus(int uid, int status, const std::string& last_login, sql::Connection* conn);
 
-    // 获取查询用户
-    std::vector<UserInfo> getUsersByNameAndPasswd(const std::string& name, const std::string passwd);
-	std::vector<UserInfo> getUserByName(const std::string& name);
-	std::vector<UserInfo> getUserById(int uid);
-    
-	// 通过邮箱更新用户密码,返回受影响的行数
-	int updateUserPasswdByEmail(const std::string& email, const std::string& passwd);
+    // 获取用户所有的聊天消息，以数组的形式返回
+    std::unique_ptr<std::vector<MessageInfo>> getMessageList(int uid, sql::Connection* conn);
+    // 获取联系人列表，以数组的形式返回
+    std::unique_ptr<std::vector<ContactInfo>> getContactList(int uid, sql::Connection* conn);
+    // 获取聊天消息列表，以数组的形式返回
+    std::unique_ptr<std::vector<ChatMessageInfo>> getChatMessageList(const int& uid, const int& friend_uid, const int& last_message_id, sql::Connection* conn);
 
-    bool checkNameAndPasswd(const std::string& name, const std::string& passwd, UserInfo& user_info);
+    // 插入聊天消息
+    int insertChatMessage(ChatMessageInfo& message, sql::Connection* conn);
+       
+    // 获取最后消息的id
+    int getLastMessageId(const int& sender_id, const int& receiver_id, sql::Connection* conn);
 
-private:
-    std::unique_ptr<MysqlPool> _pool;
+    // 更新好友的未读消息和未读数量
+    int updateFriendRelationshipMessage(const int& message_id, const int& sender_id, const int& receiver_id, sql::Connection* conn);
+
+    // 获取好友关系
+    std::unique_ptr<FriendRelationship> getFriendRelationship(std::unique_ptr<FriendRelationship> fr, sql::Connection* conn);
+
+    // 更新好友关系
+    int updateFriendRelationship(std::unique_ptr<FriendRelationship> fr, sql::Connection* conn);
 };

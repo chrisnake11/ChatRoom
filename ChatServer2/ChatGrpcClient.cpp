@@ -5,11 +5,11 @@
 
 ChatGrpcClient::ChatGrpcClient()
 {
-	// ¶ÁÈ¡ËùÓĞµÄÁÄÌì·şÎñÆ÷µØÖ·
+	// è¯»å–æ‰€æœ‰çš„èŠå¤©æœåŠ¡å™¨åœ°å€
 	auto& config = ConfigManager::GetInstance();
 	auto server_list = config["PeerServer"]["Servers"];
 
-	// ½«ÁÄÌì·şÎñÆ÷µØÖ·×Ö·û´®×ªÎªÊı×é
+	// å°†èŠå¤©æœåŠ¡å™¨åœ°å€å­—ç¬¦ä¸²è½¬ä¸ºæ•°ç»„
 	std::vector<std::string> words;
 	std::stringstream ss(server_list);
 	std::string word;
@@ -17,18 +17,18 @@ ChatGrpcClient::ChatGrpcClient()
 		words.push_back(word);
 	}
 
-	// ¸øÃ¿¸öÁÄÌì·şÎñÆ÷´´½¨Ò»¸öÁ¬½Ó³Ø
+	// ç»™æ¯ä¸ªèŠå¤©æœåŠ¡å™¨åˆ›å»ºä¸€ä¸ªè¿æ¥æ± 
 	for (auto& word : words) {
 		if (config[word]["Name"].empty()) {
 			continue;
 		}
 		_pools[config[word]["Name"]] = std::make_unique<ChatConPool>
-			(5, config[word]["Host"], config[word]["Port"]);
+			(5, config[word]["Host"], config[word]["RPCPort"]);
 	}
 
 }
 
-// µ÷ÓÃGRPC½Ó¿Ú£¬²ÎÊı1Îª·şÎñÆ÷IP£¬²ÎÊı2ÎªÇëÇóÊı¾İ¸ñÊ½
+// è°ƒç”¨GRPCæ¥å£ï¼Œå‚æ•°1ä¸ºæœåŠ¡å™¨IPï¼Œå‚æ•°2ä¸ºè¯·æ±‚æ•°æ®æ ¼å¼
 AddFriendRsp ChatGrpcClient::notifyAddFriend(std::string server_ip, const AddFriendReq& req) {
 	// TODO
 	AddFriendRsp rsp;
@@ -39,8 +39,21 @@ AuthFriendRsp ChatGrpcClient::notifyAuthFriend(std::string server_ip, const Auth
 	AuthFriendRsp rsp;
 	return rsp;
 }
-TextChatMessageRsp ChatGrpcClient::notifyTextChatMessage(std::string server_ip, const TextChatMessageReq& req, const Json::Value& return_value) {
-	// TODO
-	TextChatMessageRsp rsp;
-	return rsp;
+TextChatMessageRsp ChatGrpcClient::notifyTextChatMessage(std::string server_name, const TextChatMessageReq& req) {
+	// é€‰å–æŒ‡å®šçš„æœåŠ¡å™¨çš„è¿æ¥
+	ClientContext context;
+	TextChatMessageRsp reply;
+	auto stub = _pools[server_name]->getConnection();
+
+	// è°ƒç”¨GRPCæ¥å£
+    Status status = stub->notifyTextChatMessage(&context, req, &reply);
+	Defer defer([&stub, &server_name, this] {
+		_pools[server_name]->returnConnection(std::move(stub));
+		});
+
+	if (!status.ok()) {
+		reply.set_error(ErrorCodes::ERROR_RPC_FAILED);
+	}
+
+	return reply;
 }

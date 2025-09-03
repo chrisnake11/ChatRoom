@@ -133,6 +133,7 @@
     <ClCompile Include="ConfigManager.cpp" />
     <ClCompile Include="CServer.cpp" />
     <ClCompile Include="CSession.cpp" />
+    <ClCompile Include="Data.cpp" />
     <ClCompile Include="Data.h" />
     <ClCompile Include="LogicSystem.cpp" />
     <ClCompile Include="message.grpc.pb.cc" />
@@ -141,6 +142,7 @@
     <ClCompile Include="MysqlManager.cpp" />
     <ClCompile Include="RedisManager.cpp" />
     <ClCompile Include="UserManager.cpp" />
+    <ClCompile Include="VerifyGrpcClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\GateServer1\StatusGrpcClient.h" />
@@ -159,7 +161,10 @@
     <ClInclude Include="MysqlManager.h" />
     <ClInclude Include="RedisManager.h" />
     <ClInclude Include="Singleton.h" />
+    <ClInclude Include="StatusGrpcClient.h" />
     <ClInclude Include="UserManager.h" />
+    <ClInclude Include="Utils.h" />
+    <ClInclude Include="VerifyGrpcClient.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="config.ini" />

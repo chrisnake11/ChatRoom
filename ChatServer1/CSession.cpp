@@ -188,7 +188,7 @@ void CSession::send(const char* msg, short max_length, short msg_id) {
 		return;
 	}
 	auto& send_node = _send_queue.front();
-	std::cout << "csession send_node, msg_id: " << send_node->_msg_id << " data: " << send_node->_data << std::endl;
+	std::cout << "csession send_node, msg_id: " << send_node->_msg_id << " data-length: " << send_node->_total_length << std::endl;
 	boost::asio::async_write(_socket, boost::asio::buffer(send_node->_data, send_node->_total_length), 
 		std::bind(&CSession::handleWrite, this, std::placeholders::_1, shared_from_this()));
 }

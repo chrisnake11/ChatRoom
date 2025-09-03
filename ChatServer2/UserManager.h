@@ -9,7 +9,7 @@
 class CSession;
 
 /*
-	Ê¹ÓÃÒ»¸ömap£¬¹ÜÀíÓÃ»§IDºÍsessionµÄÓ³Éä¹ØÏµ
+	ä½¿ç”¨ä¸€ä¸ªmapï¼Œç®¡ç†ç”¨æˆ·IDå’Œsessionçš„æ˜ å°„å…³ç³»
 */
 
 class UserManager : public Singleton<UserManager> {

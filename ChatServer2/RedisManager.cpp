@@ -33,16 +33,16 @@ bool RedisManager::Get(const std::string& key, std::string& value)
         _redis_pool->ReturnConnection(connection);
         }); 
     
-    // ·µ»ØÀàĞÍÎªvoid*£¬ĞèÒªÇ¿×ª³ÉredisReply*
+    // è¿”å›ç±»å‹ä¸ºvoid*ï¼Œéœ€è¦å¼ºè½¬æˆredisReply*
     reply = (redisReply*)redisCommand(connection, "GET %s", key.c_str());
 
-    // ¼ì²éÖ´ĞĞ½á¹û
+    // æ£€æŸ¥æ‰§è¡Œç»“æœ
     if (reply == nullptr) {
         std::cout << "[ GET " << key << "] failed." << std::endl;
         return false;
     }
 
-    // ¼ì²é·µ»ØÀàĞÍ
+    // æ£€æŸ¥è¿”å›ç±»å‹
     if (reply->type != REDIS_REPLY_STRING){
         std::cout << "[ GET " << key << "] is not string type." << std::endl;
         return false;
@@ -66,16 +66,16 @@ bool RedisManager::Set(const std::string& key, const std::string& value)
         _redis_pool->ReturnConnection(connection);
         }); 
     
-    // ·µ»ØÀàĞÍÎªvoid*£¬ĞèÒªÇ¿×ª³ÉredisReply*
+    // è¿”å›ç±»å‹ä¸ºvoid*ï¼Œéœ€è¦å¼ºè½¬æˆredisReply*
     reply = (redisReply*)redisCommand(connection, "SET %s %s", key.c_str(), value.c_str());
 
-    // ¼ì²éÖ´ĞĞ½á¹û
+    // æ£€æŸ¥æ‰§è¡Œç»“æœ
     if (reply == nullptr) {
         std::cout << "[ SET " << key << " " << value << " ] failed." << std::endl;
         return false;
     }
 
-    // Ö»ÓĞ·µ»Ø³É¹¦ÇÒÊÇOK²Å³É¹¦
+    // åªæœ‰è¿”å›æˆåŠŸä¸”æ˜¯OKæ‰æˆåŠŸ
     if (!(reply->type == REDIS_REPLY_STATUS && (strcmp(reply->str, "OK") || strcmp(reply->str, "ok")))) {
         std::cout << "Execut command [ SET " << key << "  " << value << " ] failure ! " << std::endl;
         return false;
@@ -104,7 +104,7 @@ bool RedisManager::LPush(const std::string& key, const std::string& value)
         return false;
     }
 
-    // Ö»ÓĞ·µ»ØÖµÊÇÕûÊıÇÒ´óÓÚ0²ÅËã³É¹¦
+    // åªæœ‰è¿”å›å€¼æ˜¯æ•´æ•°ä¸”å¤§äº0æ‰ç®—æˆåŠŸ
     if (!(reply->type == REDIS_REPLY_INTEGER && reply->integer > 0) ) {
         std::cout << "Execut command [ LPUSH " << key << "  " << value << " ] failed ! " << std::endl;
         return false;
@@ -133,7 +133,7 @@ bool RedisManager::RPush(const std::string& key, const std::string& value)
         return false;
     }
 
-    // Ö»ÓĞ·µ»ØÖµÊÇÕûÊıÇÒ´óÓÚ0²ÅËã³É¹¦
+    // åªæœ‰è¿”å›å€¼æ˜¯æ•´æ•°ä¸”å¤§äº0æ‰ç®—æˆåŠŸ
     if (!(reply->type == REDIS_REPLY_INTEGER && reply->integer > 0)) {
         std::cout << "Execut command [ RPush " << key << "  " << value << " ] failed ! " << std::endl;
         return false;
@@ -248,7 +248,7 @@ bool RedisManager::HSet(const char* key, const char* field, const char* value, s
         _redis_pool->ReturnConnection(connection);
         });
 
-    // ÔÊĞí½«ÃüÁî²ÎÊı£¬Í¨¹ı×Ö·ûÊı×éµÄĞÎÊ½´«µİ¡£
+    // å…è®¸å°†å‘½ä»¤å‚æ•°ï¼Œé€šè¿‡å­—ç¬¦æ•°ç»„çš„å½¢å¼ä¼ é€’ã€‚
     reply = (redisReply*)redisCommandArgv(connection, 4, argv, argvlen);
     if (reply == nullptr) {
         std::cout << "Execut command [ HSET " << key << "  " << field << " " << value << " ] failed ! " << std::endl;
@@ -362,7 +362,7 @@ bool RedisManager::HDel(const std::string& key, const std::string& field)
     }
 
     bool success = false;
-    // integer > 0 ±íÊ¾É¾³ı³É¹¦
+    // integer > 0 è¡¨ç¤ºåˆ é™¤æˆåŠŸ
     if (reply->type == REDIS_REPLY_INTEGER) {
         success = reply->integer > 0;
     }
@@ -403,7 +403,6 @@ bool RedisManager::ExistKey(const std::string& key) {
         return false;
     }
 
-
     redisReply* reply = nullptr;
     Defer defer([&reply, &connection, this]() {
         if (reply) freeReplyObject(reply);
@@ -426,11 +425,108 @@ bool RedisManager::ExistKey(const std::string& key) {
     return true;
 }
 
+bool RedisManager::LRange(const std::string& key, int start, int end, std::vector<std::string>& values) {
+    auto connection = _redis_pool->GetConnection();
+    if (connection == nullptr) {
+        return false;
+    }
+
+    redisReply* reply = nullptr;
+    Defer defer([&reply, &connection, this]() {
+        if (reply) freeReplyObject(reply);
+        _redis_pool->ReturnConnection(connection);
+        });
+
+    reply = (redisReply*)redisCommand(connection, "LRANGE %s %d %d", key.c_str(), start, end);
+
+    if (reply == nullptr) {
+        std::cout << "LRange " << key << " [ " << start << ", " << end << "] failed !" << std::endl;
+        return false;
+    }
+
+    // è¿”å›ç±»å‹ä¸æ˜¯æ•°ç»„
+    if (reply->type != REDIS_REPLY_ARRAY) {
+        std::cout << "Not Found [ " << key << " [ " << start << ", " << end << "] " << std::endl;
+        return false;
+    }
+
+    values.clear();
+
+    for (size_t i = 0; i < reply->elements; ++i) {
+        values.push_back(reply->element[i]->str);
+    }
+
+    std::cout << "Found [ " << key << " [ " << start << ", " << end << "] " << std::endl;
+    return true;
+}
+
+bool RedisManager::LTrim(const std::string& key, int start, int end)
+{
+    auto connection = _redis_pool->GetConnection();
+    if (connection == nullptr) {
+        return false;
+    }
+
+    redisReply* reply = nullptr;
+    Defer defer([&reply, &connection, this]() {
+        if (reply) freeReplyObject(reply);
+        _redis_pool->ReturnConnection(connection);
+        });
+
+    reply = (redisReply*)redisCommand(connection, "LTRIM %s %d %d", key.c_str(), start, end);
+
+    if (reply == nullptr) {
+        std::cout << "LTrim " << key << " [ " << start << ", " << end << "] failed !" << std::endl;
+        return false;
+    }
+
+    // è¿”å›ç±»å‹ä¸æ˜¯æ•°ç»„
+    if (reply->type != REDIS_REPLY_ARRAY) {
+        std::cout << "Not Found Trim [ " << key << " [ " << start << ", " << end << "] " << std::endl;
+        return false;
+    }
+
+    std::cout << "Found Trim [ " << key << " [ " << start << ", " << end << "] " << std::endl;
+    return true;
+}
+
+bool RedisManager::LRem(const std::string& key, int index, const std::string& str_item)
+{
+    auto connection = _redis_pool->GetConnection();
+    if (connection == nullptr) {
+        return false;
+    }
+
+    redisReply* reply = nullptr;
+    Defer defer([&reply, &connection, this]() {
+        if (reply) freeReplyObject(reply);
+        _redis_pool->ReturnConnection(connection);
+        });
+
+    reply = (redisReply*)redisCommand(connection, "LREM %s %d %s", key.c_str(), index, str_item.c_str());
+
+    if (reply == nullptr) {
+        std::cout << "LTrim " << key << " [ " << index << ", " << str_item << "] failed !" << std::endl;
+        return false;
+    }
+
+    // è¿”å›ç±»å‹ä¸æ˜¯æ•°ç»„
+    if (reply->type != REDIS_REPLY_INTEGER) {
+        std::cout << "Not Found Trim [ " << key << " [ " << index << ", " << str_item << "] " << std::endl;
+        return false;
+    }
+
+    std::cout << "LREM " << key << " count=" << index << " value=" << str_item
+        << " deleted=" << reply->integer << std::endl;
+    return true;
+}
+
+
 RedisPool::RedisPool(std::size_t pool_size, const char* host, int port, const char* pwd)
     : _pool_size(pool_size), _host(host), _port(port), _b_stop(false)
 {
     std::cout << "RedisPool init..." << std::endl;
-    // ³õÊ¼»¯redisÁ¬½Ó£¬ÈÏÖ¤²¢Ìí¼Óµ½Á¬½Ó³Ø
+    // åˆå§‹åŒ–redisè¿æ¥ï¼Œè®¤è¯å¹¶æ·»åŠ åˆ°è¿æ¥æ± 
     for (std::size_t i = 0; i < pool_size; ++i) {
         auto* context = redisConnect(_host, _port);
         if (context == nullptr || context->err != 0) {
@@ -459,7 +555,9 @@ RedisPool::RedisPool(std::size_t pool_size, const char* host, int port, const ch
     }
 }
 
-// Îö¹¹Ê±£¬ÊÍ·ÅÁ¬½Ó³ØÖĞµÄËùÓĞÁ¬½Ó
+
+
+// ææ„æ—¶ï¼Œé‡Šæ”¾è¿æ¥æ± ä¸­çš„æ‰€æœ‰è¿æ¥
 RedisPool::~RedisPool()
 {
     std::lock_guard<std::mutex> lock(_mutex);

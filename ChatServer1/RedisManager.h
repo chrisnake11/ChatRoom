@@ -47,7 +47,9 @@ public:
 	std::string HGet(const char* key, const char* field);
 	bool HDel(const std::string& key, const std::string& field);
 	bool ExistKey(const std::string& key);
-
+	bool LRange(const std::string& key, int start, int end, std::vector<std::string>& values);
+	bool LTrim(const std::string& key, int start, int end);
+	bool LRem(const std::string& key, int index, const std::string& str_item);
 	void Close();
 
 	/*std::string AcquireLock(const std::string& lock_name, int lock_timeout, int acquire_timeout);

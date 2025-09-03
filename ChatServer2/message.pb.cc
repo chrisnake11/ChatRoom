@@ -525,7 +525,7 @@ const char descriptor_table_protodef_message_2eproto[] PROTOBUF_SECTION_VARIABLE
   "FriendReq\022\013\n\003uid\030\001 \001(\005\022\r\n\005touid\030\002 \001(\005\":\n"
   "\rAuthFriendRsp\022\r\n\005error\030\001 \001(\005\022\013\n\003uid\030\002 \001"
   "(\005\022\r\n\005touid\030\003 \001(\005\"+\n\014TextChatData\022\r\n\005msg"
-  "id\030\001 \001(\t\022\014\n\004data\030\002 \001(\005\"X\n\022TextChatMessag"
+  "id\030\001 \001(\005\022\014\n\004data\030\002 \001(\t\"X\n\022TextChatMessag"
   "eReq\022\013\n\003uid\030\001 \001(\005\022\r\n\005touid\030\002 \001(\005\022&\n\007mess"
   "age\030\003 \003(\0132\025.message.TextChatData\"g\n\022Text"
   "ChatMessageRsp\022\r\n\005error\030\001 \001(\005\022\013\n\003uid\030\002 \001"
@@ -4173,19 +4173,19 @@ TextChatData::TextChatData(::PROTOBUF_NAMESPACE_ID::Arena* arena)
 TextChatData::TextChatData(const TextChatData& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  msgid_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  if (!from._internal_msgid().empty()) {
-    msgid_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_msgid(),
+  data_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (!from._internal_data().empty()) {
+    data_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_data(),
       GetArena());
   }
-  data_ = from.data_;
+  msgid_ = from.msgid_;
   // @@protoc_insertion_point(copy_constructor:message.TextChatData)
 }
 
 void TextChatData::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_TextChatData_message_2eproto.base);
-  msgid_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  data_ = 0;
+  data_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  msgid_ = 0;
 }
 
 TextChatData::~TextChatData() {
@@ -4196,7 +4196,7 @@ TextChatData::~TextChatData() {
 
 void TextChatData::SharedDtor() {
   GOOGLE_DCHECK(GetArena() == nullptr);
-  msgid_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  data_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
 void TextChatData::ArenaDtor(void* object) {
@@ -4220,8 +4220,8 @@ void TextChatData::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  msgid_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-  data_ = 0;
+  data_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+  msgid_ = 0;
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -4233,19 +4233,19 @@ const char* TextChatData::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_I
     ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
     CHK_(ptr);
     switch (tag >> 3) {
-      // string msgid = 1;
+      // int32 msgid = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
-          auto str = _internal_mutable_msgid();
-          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
-          CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "message.TextChatData.msgid"));
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+          msgid_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // int32 data = 2;
+      // string data = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
-          data_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 18)) {
+          auto str = _internal_mutable_data();
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(::PROTOBUF_NAMESPACE_ID::internal::VerifyUTF8(str, "message.TextChatData.data"));
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -4277,20 +4277,20 @@ failure:
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // string msgid = 1;
-  if (this->msgid().size() > 0) {
-    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
-      this->_internal_msgid().data(), static_cast<int>(this->_internal_msgid().length()),
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "message.TextChatData.msgid");
-    target = stream->WriteStringMaybeAliased(
-        1, this->_internal_msgid(), target);
+  // int32 msgid = 1;
+  if (this->msgid() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(1, this->_internal_msgid(), target);
   }
 
-  // int32 data = 2;
-  if (this->data() != 0) {
-    target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(2, this->_internal_data(), target);
+  // string data = 2;
+  if (this->data().size() > 0) {
+    ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
+      this->_internal_data().data(), static_cast<int>(this->_internal_data().length()),
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
+      "message.TextChatData.data");
+    target = stream->WriteStringMaybeAliased(
+        2, this->_internal_data(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -4309,18 +4309,18 @@ size_t TextChatData::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // string msgid = 1;
-  if (this->msgid().size() > 0) {
+  // string data = 2;
+  if (this->data().size() > 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->_internal_msgid());
+        this->_internal_data());
   }
 
-  // int32 data = 2;
-  if (this->data() != 0) {
+  // int32 msgid = 1;
+  if (this->msgid() != 0) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
-        this->_internal_data());
+        this->_internal_msgid());
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -4354,11 +4354,11 @@ void TextChatData::MergeFrom(const TextChatData& from) {
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from.msgid().size() > 0) {
-    _internal_set_msgid(from._internal_msgid());
-  }
-  if (from.data() != 0) {
+  if (from.data().size() > 0) {
     _internal_set_data(from._internal_data());
+  }
+  if (from.msgid() != 0) {
+    _internal_set_msgid(from._internal_msgid());
   }
 }
 
@@ -4383,8 +4383,8 @@ bool TextChatData::IsInitialized() const {
 void TextChatData::InternalSwap(TextChatData* other) {
   using std::swap;
   _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
-  msgid_.Swap(&other->msgid_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
-  swap(data_, other->data_);
+  data_.Swap(&other->data_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+  swap(msgid_, other->msgid_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata TextChatData::GetMetadata() const {

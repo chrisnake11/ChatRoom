@@ -30,12 +30,12 @@ using message::TextChatMessageReq;
 using message::TextChatMessageRsp;
 using message::TextChatData;
 
-// ÎªÁËÊ¹ÁÄÌì·şÎñÆ÷ÄÜ¹»¸ßĞ§½¨Á¢¶à¸öÁ¬½Ó£¬Ê¹ÓÃÁ¬½Ó³Ø
+// ä¸ºäº†ä½¿èŠå¤©æœåŠ¡å™¨èƒ½å¤Ÿé«˜æ•ˆå»ºç«‹å¤šä¸ªè¿æ¥ï¼Œä½¿ç”¨è¿æ¥æ± 
 class ChatConPool {
 public:
 	ChatConPool(size_t pool_size, std::string host, std::string port)
 		: _pool_size(pool_size), _host(std::move(host)), _port(std::move(port)) {
-		// ´´½¨¶à¸öGRPCÁ¬½Ó
+		// åˆ›å»ºå¤šä¸ªGRPCè¿æ¥
 		for (size_t i = 0; i < _pool_size; ++i) {
 			std::shared_ptr<Channel> channel = grpc::CreateChannel(_host + ":" + _port, grpc::InsecureChannelCredentials());
 			_connections.push(ChatService::NewStub(channel));
@@ -56,17 +56,17 @@ public:
 
 	std::unique_ptr<ChatService::Stub> getConnection() {
 		std::unique_lock<std::mutex> lock(_mutex);
-		// Í£Ö¹Ö±½Ó·µ»Ø¿Õ
+		// åœæ­¢ç›´æ¥è¿”å›ç©º
 		if (_b_stop) {
 			return nullptr;
 		}
 
-		// Ã»Í£Ö¹£¬ÇÒÎª¿Õ£¬µÈ´ı
+		// æ²¡åœæ­¢ï¼Œä¸”ä¸ºç©ºï¼Œç­‰å¾…
 		while (_connections.empty() && !_b_stop) {
 			_cond.wait(lock);
 		}
 		
-		// Ã»Í£Ö¹£¬²»Îª¿Õ£¬·µ»ØÁ¬½Ó
+		// æ²¡åœæ­¢ï¼Œä¸ä¸ºç©ºï¼Œè¿”å›è¿æ¥
 		std::unique_ptr<ChatService::Stub> conn = std::move(_connections.front());
 		_connections.pop();
 		return conn;
@@ -91,6 +91,7 @@ private:
 	std::condition_variable _cond;
 };
 
+// èŠå¤©æœåŠ¡å™¨GRPCå®¢æˆ·ç«¯ï¼Œå°è£…äº†GRPCæ¥å£
 class ChatGrpcClient : public Singleton<ChatGrpcClient> {
 	friend class Singleton<ChatGrpcClient>;
 public:
@@ -98,11 +99,10 @@ public:
 
 	}
 
-	// µ÷ÓÃGRPC½Ó¿Ú£¬²ÎÊı1Îª·şÎñÆ÷IP£¬²ÎÊı2ÎªÇëÇóÊı¾İ¸ñÊ½
+	// è°ƒç”¨GRPCæ¥å£ï¼Œå‚æ•°1ä¸ºæœåŠ¡å™¨IPï¼Œå‚æ•°2ä¸ºè¯·æ±‚æ•°æ®æ ¼å¼
 	AddFriendRsp notifyAddFriend(std::string server_ip, const AddFriendReq& req);
 	AuthFriendRsp notifyAuthFriend(std::string server_ip, const AuthFriendReq& req);
-	bool getBaseInfo(std::string base_key, int uid, std::shared_ptr<UserInfo>& user_info);
-	TextChatMessageRsp notifyTextChatMessage(std::string server_ip, const TextChatMessageReq& req, const Json::Value& return_value);
+	TextChatMessageRsp notifyTextChatMessage(std::string server_ip, const TextChatMessageReq& req);
 	
 
 private:

@@ -3,7 +3,7 @@
 boost::asio::io_context& AsioIOServicePool::GetIOService()
 {
 	auto& service = _io_services[_next_io_service++];
-	// ÂÖÑ¯¡£
+	// è½®è¯¢ã€‚
 	if (_next_io_service == _io_services.size()) {
 		_next_io_service = 0;
 	}
@@ -12,27 +12,27 @@ boost::asio::io_context& AsioIOServicePool::GetIOService()
 
 void AsioIOServicePool::Stop()
 {
-	// ½áÊøio_context
+	// ç»“æŸio_context
 	for (auto& work : _works) {
 		work.reset();
 	}
 
-	// µÈ´ıÏß³ÌÍË³ö
+	// ç­‰å¾…çº¿ç¨‹é€€å‡º
 	for (auto& thread : _threads) {
 		thread.join();
 	}
 }
 
 AsioIOServicePool::AsioIOServicePool(std::size_t size):_io_services(size),_works(size), _next_io_service(0) {
-	// ³õÊ¼»¯io_context
+	// åˆå§‹åŒ–io_context
 	for (std::size_t i = 0; i < size; i++) {
 		_works[i] = std::unique_ptr<Work>(new Work(_io_services[i]));
 	}
 
-	// ÎªÃ¿¸öio_context´´½¨Ò»¸öÏß³Ì£¬²¢ÇÒ¿ªÊ¼Ö´ĞĞ¡£
+	// ä¸ºæ¯ä¸ªio_contextåˆ›å»ºä¸€ä¸ªçº¿ç¨‹ï¼Œå¹¶ä¸”å¼€å§‹æ‰§è¡Œã€‚
 	for (std::size_t i = 0; i < size; i++) {
 		_threads.emplace_back(std::thread(
-			// this²¶»ñ£¬ÒÔ·ÃÎÊ_io_services[i]³ÉÔ±
+			// thisæ•è·ï¼Œä»¥è®¿é—®_io_services[i]æˆå‘˜
 			[this, i]() {
 				_io_services[i].run();
 			}

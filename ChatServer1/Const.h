@@ -38,6 +38,7 @@ enum ErrorCodes {
 	ERROR_TOKEN_INVALID = 1011, // token无效
 	ERROR_LOAD_USERINFO_FAILED = 1012, // 用户登录失败
 	ERROR_LOAD_FRIEND_INFO_FAILED = 1013, // 加载好友信息失败
+	ERROR_GRPC_SEND_MESSAGE_ERROR = 1014, // grpc发送消息失败
 };
 
 // 验证码redis前缀
@@ -93,6 +94,8 @@ enum MSG_ID {
 	MSG_GET_CHAT_MESSAGE = 1008, // 获取聊天消息
 	MSG_GET_CONTACT_LIST = 1009, // 获取联系人列表
 	MSG_GET_CONTACT_INFO = 1010, // 获取联系人信息
+	MSG_SEND_CHAT_MESSAGE = 1011, // 发送聊天消息，响应
+	MSG_RECEIVE_CHAT_MESSAGE = 1012, // 收到聊天消息
 };
 
 // redis前缀 key

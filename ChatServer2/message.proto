@@ -96,8 +96,8 @@ message AuthFriendRsp{
 
 // 单条文本消息，有多个类别
 message TextChatData{
-	string msgid = 1; // 消息唯一标识，用于标识该消息是否已经被接收
-	int32 data = 2;
+	int32 msgid = 1; // 消息唯一标识，用于标识该消息是否已经被接收
+	string data = 2;
 }
 
 // 批量发送消息
@@ -111,9 +111,9 @@ message TextChatMessageRsp{
 	int32 error = 1;
 	int32 uid = 2;
 	int32 touid = 3;
-	repeated TextChatData message = 4;
 }
 
+// 聊天服务端接口
 service ChatService{
 	rpc sendChatMessage(SendChatMessageReq) returns (SendChatMessageRsp){}
 	rpc notifyAddFriend(AddFriendReq) returns (AddFriendRsp){}

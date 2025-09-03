@@ -16,6 +16,7 @@ CSession::~CSession()
 
 void CSession::start()
 {
+	asyncReadHead(HEAD_TOTAL_LENGTH);
 }
 
 void CSession::close() {
@@ -29,6 +30,7 @@ boost::asio::ip::tcp::socket& CSession::getSocket() {
 
 void CSession::asyncReadFull(std::size_t max_length, std::function<void(const boost::system::error_code& error, std::size_t)> handler)
 {
+	std::cout << "AysncReadFull: " << max_length << std::endl;
 	::memset(_data, 0, max_length);
 	asyncReadLen(0, max_length, handler);
 }
@@ -77,6 +79,8 @@ void CSession::handleWrite(const boost::system::error_code& error, std::shared_p
 void CSession::asyncReadHead(int total_len)
 {
 	auto self = shared_from_this();
+
+	// 读取从(0, HEAD_TOTAL_LENGTH)的数据
 	asyncReadFull(HEAD_TOTAL_LENGTH, [self, this](const boost::system::error_code& error, std::size_t bytes_transfered) {
 		try {
 			if (error) {
@@ -121,6 +125,7 @@ void CSession::asyncReadHead(int total_len)
 
 			// 构造RecvNode，开始读取消息体
 			_recv_msg_node = std::make_shared<RecvNode>(msg_len, msg_id);
+			// 读取从0开始，长度为msg_len的数据
 			asyncReadBody(msg_len);
 
 		}
@@ -131,6 +136,7 @@ void CSession::asyncReadHead(int total_len)
 		});
 }
 
+// 读取从数据包payload部分，(0, total_length)的数据
 void CSession::asyncReadBody(int total_length) {
 	auto self = shared_from_this();
 	asyncReadFull(total_length, [self, this, total_length](const boost::system::error_code& error, std::size_t bytes_transfered) {
@@ -150,7 +156,8 @@ void CSession::asyncReadBody(int total_length) {
 			}
 
 			_recv_msg_node->clear();
-			memcpy(_recv_msg_node->_data, _data + HEAD_TOTAL_LENGTH, bytes_transfered);
+			// 拷贝数据
+			memcpy(_recv_msg_node->_data, _data, bytes_transfered);
 			_recv_msg_node->_cur_length += bytes_transfered;
 			_recv_msg_node->_data[_recv_msg_node->_total_length] = '\0';
 			std::cout << "recv_msg_data is" << _recv_msg_node->_data << std::endl;
@@ -181,21 +188,15 @@ void CSession::send(const char* msg, short max_length, short msg_id) {
 		return;
 	}
 	auto& send_node = _send_queue.front();
+	std::cout << "csession send_node, msg_id: " << send_node->_msg_id << " data-length: " << send_node->_total_length << std::endl;
 	boost::asio::async_write(_socket, boost::asio::buffer(send_node->_data, send_node->_total_length), 
 		std::bind(&CSession::handleWrite, this, std::placeholders::_1, shared_from_this()));
-
 }
 
 void CSession::send(const std::string& msg, short msg_id) {
 	// 使用 c_str() 转换为 const char*
 	send(msg.c_str(), static_cast<short>(msg.length()), msg_id);
 }
-
-// 支持移动语义的重载（C++11及以上）
-void CSession::send(std::string&& msg, short msg_id) {
-	send(msg.c_str(), static_cast<short>(msg.length()), msg_id);
-}
-
 
 LogicNode::LogicNode(std::shared_ptr<CSession> session, std::shared_ptr<RecvNode> recv_node): _session(session), _recv_node(recv_node)
 {
