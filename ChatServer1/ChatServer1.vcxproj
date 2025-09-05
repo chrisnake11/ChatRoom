@@ -140,6 +140,7 @@
     <ClCompile Include="MysqlDao.cpp" />
     <ClCompile Include="MysqlManager.cpp" />
     <ClCompile Include="RedisManager.cpp" />
+    <ClCompile Include="Singleton.cpp" />
     <ClCompile Include="UserManager.cpp" />
   </ItemGroup>
   <ItemGroup>

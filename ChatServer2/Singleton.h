@@ -1,6 +1,7 @@
 #pragma once
 #include <mutex>
 #include <iostream>
+
 template <typename T>
 class Singleton
 {
@@ -12,13 +13,9 @@ protected:
 private:
     static std::once_flag _flag;
 public:
-    static std::shared_ptr<T> getInstance()
-    {
-        std::call_once(_flag, [&]() {
-            _instance = std::shared_ptr<T>(new T);
-            });
-        return _instance;
-    }
+
+    // 类内自动inline，多DLL加载时，会重复创建对象
+    static std::shared_ptr<T> getInstance();
     void printAddress()
     {
         std::cout << "Singleton address: " << _instance.get() << std::endl;
