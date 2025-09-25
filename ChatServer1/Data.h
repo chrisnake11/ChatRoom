@@ -78,8 +78,23 @@ struct FriendRelationship {
     int unread_count;
 };
 
+struct SearchFriendInfo {
+    int uid;
+    std::string avatar;
+    std::string username;
+    std::string nickname;
+};
 
+// 添加好友的结果状态数据
 struct AddFriendInfo {
+    int sender_id; // 主动添加的用户ID
+    int receiver_id; // 被添加好友的ID
+    //QString message; // 附加消息
+    std::string avatar; // 头像URL
+    std::string nickname; // 昵称
+    std::string username; // 用户名
+    int status; // 好友请求的状态
+    std::string request_time; // 发起请求的时间
 };
 
 struct AuthFriendInfo {

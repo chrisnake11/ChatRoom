@@ -77,6 +77,16 @@ public:
 	std::unique_ptr<FriendRelationship> getFriendRelationship(std::unique_ptr<FriendRelationship>);
 	int updateFriendRelationship(std::unique_ptr<FriendRelationship>);
 
+    // 模糊搜索好友的username和nickname
+	std::unique_ptr<std::vector<SearchFriendInfo>> searchFriendList(const std::string& friend_name);
+
+    // 添加好友请求
+	int addFriendRequest(const int& uid, const int& friend_uid);
+
+    // 查询添加好友请求列表 
+    std::unique_ptr<std::vector<AddFriendInfo>> getFriendReuqestList(const int& uid);
+
+
 private:
 	MysqlManager();
 	MysqlDao _dao;

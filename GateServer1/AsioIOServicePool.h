@@ -15,7 +15,7 @@ public:
 	AsioIOServicePool(const AsioIOServicePool&) = delete;
 	AsioIOServicePool& operator=(const AsioIOServicePool&) = delete;
 
-	// 轮询获取一个io_context
+	// 杞鑾峰彇涓�涓猧o_context
 	boost::asio::io_context& GetIOService();
 	void Stop();
 private:
@@ -23,5 +23,5 @@ private:
 	std::vector<IOService> _io_services;
 	std::vector<WorkPtr> _works;
 	std::vector<std::thread> _threads;
-	std::size_t _next_io_service; // 下标
+	std::size_t _next_io_service; // 涓嬫爣
 };

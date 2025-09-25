@@ -309,3 +309,95 @@ int MysqlManager::updateFriendRelationship(std::unique_ptr<FriendRelationship>fr
         return -1;
     }
 }
+
+std::unique_ptr<std::vector<SearchFriendInfo>> MysqlManager::searchFriendList(const std::string& friend_name)
+{
+    auto conn = _pool->getConnection();
+    if (!conn) {
+        std::cerr << "get mysql connection failed" << std::endl;
+        return nullptr;
+    }
+    Defer defer([this, &conn]() {
+        _pool->returnConnection(std::move(conn));
+        });
+    try {
+        return _dao.searchFriendList(friend_name, conn->_con.get());
+    }
+    catch (std::exception& e) {
+        std::cerr << "search friend list by friend_name failed: " << e.what() << std::endl;
+        return nullptr;
+    }
+}
+
+int MysqlManager::addFriendRequest(const int& uid, const int& friend_uid)
+{
+    auto conn = _pool->getConnection();
+    if (!conn) {
+        std::cerr << "get mysql connection failed" << std::endl;
+        return -1;
+    }
+    Defer defer([this, &conn]() {
+        _pool->returnConnection(std::move(conn));
+        });
+    try {
+        bool isExist = _dao.existFriendRequest(uid, friend_uid, conn->_con.get());
+		// 已存在，返回0
+        if (isExist) {
+            std::cerr << "friend request is exist" << std::endl;
+            return 0;
+		}
+		return _dao.insertFriendRequest(uid, friend_uid, conn->_con.get());
+    }
+    // 失败返回-1
+    catch (std::exception& e) {
+        std::cerr << "search friend list by friend_name failed: " << e.what() << std::endl;
+        return -1;
+    }
+}
+
+std::unique_ptr<std::vector<AddFriendInfo>> MysqlManager::getFriendReuqestList(const int& uid)
+{
+    std::unique_ptr<std::vector<AddFriendInfo>> addFriendList = std::make_unique<std::vector<AddFriendInfo>>();
+    auto conn = _pool->getConnection();
+    if (!conn) {
+        std::cerr << "get mysql connection failed" << std::endl;
+        return addFriendList;
+    }
+    Defer defer([this, &conn]() {
+        _pool->returnConnection(std::move(conn));
+        });
+    try {
+        // 查询自己发送的请求
+        std::unique_ptr<std::vector<AddFriendInfo>> requestList = _dao.getFriendRequestList(uid, conn->_con.get());
+        // 查询收到的请求
+        std::unique_ptr<std::vector<AddFriendInfo>> responseList = _dao.getFriendResponseList(uid, conn->_con.get());
+
+        if (!requestList && !responseList) {
+            return addFriendList;
+        }
+
+        // 预留足够空间以提高性能
+        size_t total_size = (requestList ? requestList->size() : 0) + (responseList ? responseList->size() : 0);
+        addFriendList->reserve(total_size);
+
+        // 合并结果到addFriendList
+        if (requestList) {
+            addFriendList->insert(addFriendList->end(), std::make_move_iterator(requestList->begin()), std::make_move_iterator(requestList->end()));
+        }
+        if (responseList) {
+            addFriendList->insert(addFriendList->end(), std::make_move_iterator(responseList->begin()), std::make_move_iterator(responseList->end()));
+
+        }
+        // 根据日期排序 降序排序
+        std::sort(addFriendList->begin(), addFriendList->end(), [](const AddFriendInfo& lhs, const AddFriendInfo& rhs) {
+            return lhs.request_time > rhs.request_time;
+            });
+
+        return addFriendList;
+    }
+    // 失败
+    catch (std::exception& e) {
+        std::cerr << "search friend list by friend_name failed: " << e.what() << std::endl;
+        return addFriendList;
+    }
+}

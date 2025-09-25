@@ -242,7 +242,7 @@ void LogicSystem::chatMessageListHandler(std::shared_ptr<CSession> session, cons
 	}
 }
 
-std::unique_ptr<std::vector<ChatMessageInfo>> LogicSystem::getChatMessageList(const std::string& token_key, const int& uid, const int& friend_uid) {
+std::unique_ptr<std::vector<ChatMessageInfo>> LogicSystem::getChatMessageList(const std::string& token_key, const int& uid, const int& friend_uid, const int& message_id) {
 
 	std::unique_ptr<std::vector<ChatMessageInfo>> list_ptr = std::make_unique<std::vector<ChatMessageInfo>>();
 

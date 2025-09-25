@@ -37,4 +37,13 @@ public:
 
     // 更新好友关系
     int updateFriendRelationship(std::unique_ptr<FriendRelationship> fr, sql::Connection* conn);
+
+	std::unique_ptr<std::vector<SearchFriendInfo>> searchFriendList(const std::string& friend_name, sql::Connection* conn);
+
+	bool existFriendRequest(const int& uid, const int& friend_uid, sql::Connection* conn);
+
+	int insertFriendRequest(const int& uid, const int& friend_uid, sql::Connection* conn);
+
+    std::unique_ptr<std::vector<AddFriendInfo>> getFriendRequestList(const int& uid, sql::Connection* conn);
+    std::unique_ptr<std::vector<AddFriendInfo>> getFriendResponseList(const int& uid, sql::Connection* conn);
 };

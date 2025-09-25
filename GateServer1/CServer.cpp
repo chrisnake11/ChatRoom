@@ -8,9 +8,9 @@ CServer::CServer(boost::asio::io_context& ioc, unsigned short& port):
 
 void CServer::Start() {
 	auto self = shared_from_this();
-	// 每次从io_context池中获取io_context，并创建socket
-	boost::asio::io_context& io_context = AsioIOServicePool::GetInstance()->GetIOService();
-	// 创建一个HttpConnection处理_socket上的IO事件
+	// 姣忔浠巌o_context姹犱腑鑾峰彇io_context锛屽苟鍒涘缓socket
+	boost::asio::io_context& io_context = AsioIOServicePool::getInstance()->GetIOService();
+	// 鍒涘缓涓�涓狧ttpConnection澶勭悊_socket涓婄殑IO浜嬩欢
 	auto http_connection = std::make_shared<HttpConnection>(io_context);
 	_acceptor.async_accept(http_connection->GetSocket(), [self, http_connection](beast::error_code ec) {
 		try {
@@ -21,7 +21,7 @@ void CServer::Start() {
 				return;
 			}
 			http_connection->Start();
-			// 继续监听
+			// 缁х画鐩戝惉
 			self->Start();
 		}
 		catch (std::exception& e) {

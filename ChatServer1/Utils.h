@@ -5,7 +5,9 @@
 #include <iomanip>
 #include <sstream>
 
-std::string getDateTimeStr() {
+// TODO: 调用，LinkERROR
+// 获取符合格式的当前时间字符串 "YYYY-MM-DD HH:MM:SS"
+static std::string getDateTimeStr() {
     auto now = std::chrono::system_clock::now();             // 获取当前时间点
     std::time_t now_time_t = std::chrono::system_clock::to_time_t(now); // 转成 time_t
     std::tm tm_now;
@@ -21,7 +23,7 @@ std::string getDateTimeStr() {
     return oss.str();
 }
 
-std::string getDateStr() {
+static std::string getDateStr() {
     auto now = std::chrono::system_clock::now();             // 获取当前时间点
     std::time_t now_time_t = std::chrono::system_clock::to_time_t(now); // 转成 time_t
     std::tm tm_now;

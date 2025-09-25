@@ -2,22 +2,22 @@
 #include "ConfigManager.h"
 
 VerifyGrpcClient::VerifyGrpcClient() {
-	auto& config_manager = ConfigManager::GetInstance();
+	auto& config_manager = ConfigManager::getInstance();
 	auto host = config_manager["VarifyServer"]["Host"];
 	auto port = config_manager["VarifyServer"]["Port"];
 	_stub_pool.reset(new GrpcClientPool(5, host, port));
 }
 
 GetVarifyRsp VerifyGrpcClient::GetVarifyCode(std::string email) {
-	// ´´½¨Ò»¸ö¿Í»§¶Ë
+	// åˆ›å»ºä¸€ä¸ªå®¢æˆ·ç«¯
 	ClientContext context;
 
-	// ´´½¨ÇëÇóĞÅÏ¢
+	// åˆ›å»ºè¯·æ±‚ä¿¡æ¯
 	GetVarifyRsp reply;
 	GetVarifyReq request;
 	request.set_email(email);
 
-	// Í¨¹ı´úÀí£¬µ÷ÓÃÔ¶³Ì·şÎñ
+	// é€šè¿‡ä»£ç†ï¼Œè°ƒç”¨è¿œç¨‹æœåŠ¡
 	auto stub = _stub_pool->GetStub();
 	Status status = stub->GetVarifyCode(&context, request, &reply);
 
@@ -39,12 +39,12 @@ GrpcClientPool::GrpcClientPool(std::size_t pool_size, std::string host, std::str
 	_b_stop(false)
 {
 	for (std::size_t i = 0; i < pool_size; ++i) {
-		// ´´½¨Ò»¸öÍ¨µÀ½øĞĞÍ¨ĞÅ (µØÖ·£¬ÈÏÖ¤·½Ê½)
+		// åˆ›å»ºä¸€ä¸ªé€šé“è¿›è¡Œé€šä¿¡ (åœ°å€ï¼Œè®¤è¯æ–¹å¼)
 		std::shared_ptr<Channel> channel = grpc::CreateChannel(
 			host+":"+port,
 			grpc::InsecureChannelCredentials()
 		);
-		// ¸ø´úÀíÉèÖÃÒ»¸öÍ¨µÀ
+		// ç»™ä»£ç†è®¾ç½®ä¸€ä¸ªé€šé“
 		_stub_queue.push(VarifyService::NewStub(channel));
 	}
 }
@@ -68,13 +68,13 @@ void GrpcClientPool::Close() {
 std::unique_ptr<VarifyService::Stub> GrpcClientPool::GetStub()
 {
 	std::unique_lock<std::mutex> lock(_stub_mutex);
-	// ×èÈûµÈ´ı£¬Èç¹ûÍ£Ö¹»òÕßÓĞ¿ÉÓÃµÄstub¾Í¼ÌĞø¡£
+	// é˜»å¡ç­‰å¾…ï¼Œå¦‚æœåœæ­¢æˆ–è€…æœ‰å¯ç”¨çš„stubå°±ç»§ç»­ã€‚
     _stub_cond.wait(lock, [this] { return _b_stop || !_stub_queue.empty(); });
-	// Èç¹ûÍ£Ö¹¾Í·µ»Ønullptr
+	// å¦‚æœåœæ­¢å°±è¿”å›nullptr
 	if (_b_stop) {
         return nullptr;
 	}
-	// ·ñÔò´Ó¶ÓÁĞ·µ»Østub
+	// å¦åˆ™ä»é˜Ÿåˆ—è¿”å›stub
 	auto stub = std::move(_stub_queue.front());
 	_stub_queue.pop();
 	return stub;

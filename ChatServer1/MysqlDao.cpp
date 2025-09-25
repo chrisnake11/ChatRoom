@@ -1,6 +1,7 @@
 #include "MysqlDao.h"
 #include <chrono>
 #include "MysqlManager.h"
+#include "Utils.h"
 
 MysqlDao::MysqlDao()
 {
@@ -213,4 +214,117 @@ int MysqlDao::updateFriendRelationship(std::unique_ptr<FriendRelationship> fr, s
     pstmt->setInt(5, std::min(fr->uid, fr->friend_uid));
     pstmt->setInt(6, std::max(fr->uid, fr->friend_uid));
     return pstmt->executeUpdate();
+}
+
+std::unique_ptr<std::vector<SearchFriendInfo>> MysqlDao::searchFriendList(const std::string& friend_name, sql::Connection* conn)
+{
+    std::string query_str = "SELECT uid, username, nickname, avatar "
+        "FROM user_info "
+		"WHERE username LIKE ? OR nickname LIKE ? ";
+    std::string like_pattern = "%" + friend_name + "%";
+    std::unique_ptr<sql::PreparedStatement> pstmt(
+        conn->prepareStatement(query_str));
+    pstmt->setString(1, like_pattern);
+    pstmt->setString(2, like_pattern);
+    std::unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+	std::unique_ptr<std::vector<SearchFriendInfo>> searchFriendList = 
+        std::make_unique<std::vector<SearchFriendInfo>>();
+    while (res->next()) {
+        SearchFriendInfo searchFriendInfo;
+        searchFriendInfo.uid = res->getInt("uid");
+        searchFriendInfo.username = res->getString("username");
+        searchFriendInfo.nickname = res->getString("nickname");
+        searchFriendInfo.avatar = res->getString("avatar");
+        searchFriendList->push_back(searchFriendInfo);
+    }
+
+    if (searchFriendList->empty()) {
+        return nullptr;
+    }
+    return std::move(searchFriendList);
+}
+
+bool MysqlDao::existFriendRequest(const int& uid, const int& friend_uid, sql::Connection* conn)
+{
+    std::string query_str = "SELECT COUNT(*) as request_count "
+        "FROM friend_request "
+		"WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)";
+    std::unique_ptr<sql::PreparedStatement> pstmt(
+		conn->prepareStatement(query_str));
+    pstmt->setInt(1, uid);
+    pstmt->setInt(2, friend_uid);
+    pstmt->setInt(3, friend_uid);
+    pstmt->setInt(4, uid);
+	std::unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+    if (res->next()) {
+        int count = res->getInt("request_count");
+        return count > 0;
+	}
+    return false;
+}
+
+int MysqlDao::insertFriendRequest(const int& uid, const int& friend_uid, sql::Connection* conn)
+{
+    std::string query_str =         "INSERT INTO friend_request (sender_id, receiver_id, create_time, status) "
+		"VALUES (?, ?, ?, ?, ?)";
+    std::string datetime_str = getDateTimeStr();
+    std::unique_ptr<sql::PreparedStatement> pstmt(
+        conn->prepareStatement(query_str));
+    pstmt->setInt(1, uid);
+    pstmt->setInt(2, friend_uid);
+    pstmt->setString(3, datetime_str);
+    pstmt->setInt(4, 0); // 0表示未处理，1表示已接受，2表示已拒绝
+	return pstmt->executeUpdate();
+}
+
+std::unique_ptr<std::vector<AddFriendInfo>> MysqlDao::getFriendRequestList(const int& uid, sql::Connection* conn)
+{
+    std::string query_str = "SELECT fr.sender_id, fr.receiver_id, create_time, status, message, ui.avatar, ui.username, ui.nickname "
+        "FROM friend_request fr LEFT JOIN user_info ui "
+        "ON fr.receiver_id = ui.id "
+        "WHERE fr.sender_id = ?";
+    std::unique_ptr<sql::PreparedStatement> pstmt(conn->prepareStatement(query_str));
+    pstmt->setInt(1, uid);
+    std::unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+
+    std::unique_ptr<std::vector<AddFriendInfo>> addFriendList = std::make_unique<std::vector<AddFriendInfo>>();
+
+    while(res->next()) {
+        AddFriendInfo addFriendInfo;
+        addFriendInfo.sender_id = res->getInt("sender_id");
+        addFriendInfo.receiver_id = res->getInt("receiver_id");
+        addFriendInfo.request_time = res->getString("create_time");
+        addFriendInfo.status = res->getInt("status");
+        addFriendInfo.avatar = res->getString("avatar");
+        addFriendInfo.username = res->getString("username");
+        addFriendInfo.nickname = res->getString("nickname");
+        addFriendList->push_back(addFriendInfo);
+    }
+    return addFriendList;
+}
+
+std::unique_ptr<std::vector<AddFriendInfo>> MysqlDao::getFriendResponseList(const int& uid, sql::Connection* conn)
+{
+    std::string query_str = "SELECT fr.sender_id, fr.receiver_id, create_time, status, message, ui.avatar, ui.username, ui.nickname "
+        "FROM friend_request fr LEFT JOIN user_info ui "
+        "ON fr.sender_id = ui.id "
+        "WHERE fr.receiver_id = ?";
+    std::unique_ptr<sql::PreparedStatement> pstmt(conn->prepareStatement(query_str));
+    pstmt->setInt(1, uid);
+    std::unique_ptr<sql::ResultSet> res(pstmt->executeQuery());
+
+    std::unique_ptr<std::vector<AddFriendInfo>> addFriendList = std::make_unique<std::vector<AddFriendInfo>>();
+
+    while (res->next()) {
+        AddFriendInfo addFriendInfo;
+        addFriendInfo.sender_id = res->getInt("sender_id");
+        addFriendInfo.receiver_id = res->getInt("receiver_id");
+        addFriendInfo.request_time = res->getString("create_time");
+        addFriendInfo.status = res->getInt("status");
+        addFriendInfo.avatar = res->getString("avatar");
+        addFriendInfo.username = res->getString("username");
+        addFriendInfo.nickname = res->getString("nickname");
+        addFriendList->push_back(addFriendInfo);
+    }
+    return addFriendList;
 }

@@ -111,7 +111,7 @@ std::unique_ptr<SqlConnection> MysqlPool::getConnection() {
 MysqlDao::MysqlDao()
 {
     // 获取数据库连接信息，初始化连接池
-    auto& config = ConfigManager::GetInstance();
+    auto& config = ConfigManager::getInstance();
     const auto& host = config["MySQL"]["Host"];
     const auto& user = config["MySQL"]["User"];
     const auto& passwd = config["MySQL"]["Password"];

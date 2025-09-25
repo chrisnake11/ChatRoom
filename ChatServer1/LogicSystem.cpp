@@ -79,12 +79,16 @@ void LogicSystem::postMsgToQueue(std::shared_ptr<LogicNode> node) {
 
 void LogicSystem::registerHandler()
 {
+	// 根据不同的消息码，绑定不同的处理函数
 	_handlers[MSG_ID::MSG_CHAT_LOGIN] = std::bind(&LogicSystem::loginHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 	_handlers[MSG_ID::MSG_LOGOUT] = std::bind(&LogicSystem::logoutHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 	_handlers[MSG_ID::MSG_GET_MESSAGE_LIST] = std::bind(&LogicSystem::messageListHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 	_handlers[MSG_ID::MSG_GET_CHAT_MESSAGE] = std::bind(&LogicSystem::chatMessageListHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 	_handlers[MSG_ID::MSG_GET_CONTACT_LIST] = std::bind(&LogicSystem::contactListHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 	_handlers[MSG_ID::MSG_SEND_CHAT_MESSAGE] = std::bind(&LogicSystem::sendChatMessageHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+	_handlers[MSG_ID::MSG_SEARCH_FRIEND_LIST] = std::bind(&LogicSystem::searchFriendHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+	_handlers[MSG_ID::MSG_ADD_FRIEND_REQUEST] = std::bind(&LogicSystem::addFriendRequestHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+	_handlers[MSG_ID::MSG_GET_FRIEND_NOTIFICATION] = std::bind(&LogicSystem::addFriendNotificationListHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 }
 
 void LogicSystem::sendChatMessageHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data) {
@@ -216,7 +220,7 @@ void LogicSystem::chatMessageListHandler(std::shared_ptr<CSession> session, cons
 	return_root["error"] = ErrorCodes::SUCCESS;
 	int friend_uid = root["friend_uid"].asInt();
 	std::string list_key = USER_CHAT_MESSAGE + root["uid"].asString() + "_" + std::to_string(friend_uid);
-	std::unique_ptr<std::vector<ChatMessageInfo>> message_list = getChatMessageList(list_key, uid, friend_uid, 0);
+	std::unique_ptr<std::vector<ChatMessageInfo>> message_list = getChatMessageList(list_key, uid, friend_uid);
 
 	// 添加联系人id
 	return_root["uid"] = uid;
@@ -287,7 +291,7 @@ std::unique_ptr<std::vector<ChatMessageInfo>> LogicSystem::getChatMessageList(co
 		// mysql读取失败
 		if (mysql_list == nullptr) {
 			std::cout << "MySQL get contact list uid: " << uid << " failed. " << std::endl;
-			return std::make_unique<std::vector<ChatMessageInfo>>();
+			return list_ptr;
 		}
 
 		// 添加新数据到Redis中。
@@ -368,6 +372,184 @@ void LogicSystem::contactListHandler(std::shared_ptr<CSession> session, const sh
         return_root["contact_list"].append(item_root);
 	}
 
+}
+
+void LogicSystem::searchFriendHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data)
+{
+	Json::Reader reader;
+	Json::Value root;
+	Json::Value return_root;
+	Defer defer([this, &return_root, session, &msg_id] {
+		std::string return_str = return_root.toStyledString();
+		// 调用session发送消息,消息码 MSG_SEARCH_FRIEND_LIST = 1013
+		session->send(return_str, msg_id);
+		});
+
+	if (!reader.parse(msg_data, root)) {
+		std::cout << "parse json failed" << std::endl;
+		return;
+	}
+
+	std::string friend_name = root["friend_name"].asString();
+
+	std::cout << "receivec search friend request for " << friend_name << std::endl;
+
+	int uid = root["uid"].asInt();
+	// 验证用户token
+	std::string token_key = USER_TOKEN + root["uid"].asString();
+	std::string token_value = "";
+	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
+
+	// token验证错误
+	if (!get_token_success) {
+		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
+		std::cerr << "redis get token failed" << std::endl;
+	}
+	if (token_value != root["token"].asString()) {
+		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
+		std::cerr << "token invalid" << std::endl;
+	}
+
+	// token验证成功
+	return_root["error"] = ErrorCodes::SUCCESS;
+
+	std::unique_ptr<std::vector<SearchFriendInfo>> search_list = MysqlManager::getInstance()->searchFriendList(friend_name);
+
+	if(search_list == nullptr) {
+		return_root["error"] = ErrorCodes::ERROR_LOAD_FRIEND_INFO_FAILED;
+		std::cerr << "ERROR_LOAD_FRIEND_CONTACT_INFO_FAILED" << std::endl;
+		return;
+	}
+
+	// 添加联系人数组到Json数据中
+	return_root["search_friend_list"] = Json::arrayValue;
+	for (auto& item : (*search_list)) {
+		Json::Value item_root;
+		item_root["uid"] = item.uid;
+		item_root["username"] = item.username;
+		item_root["nickname"] = item.nickname;
+		item_root["avatar"] = item.avatar;
+		return_root["search_friend_list"].append(item_root);
+	}
+}
+
+void LogicSystem::addFriendRequestHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data)
+{
+	Json::Reader reader;
+	Json::Value root;
+	Json::Value return_root;
+	Defer defer([this, &return_root, session, &msg_id] {
+		std::string return_str = return_root.toStyledString();
+		// 调用session发送消息,消息码 MSG_SEARCH_FRIEND_LIST = 1013
+		session->send(return_str, msg_id);
+		});
+
+	if (!reader.parse(msg_data, root)) {
+		std::cout << "parse json failed" << std::endl;
+		return;
+	}
+
+	int friend_uid = root["friend_uid"].asInt();
+
+	std::cout << "receivec add friend request for " << friend_uid << std::endl;
+
+	int uid = root["uid"].asInt();
+	// 验证用户token
+	std::string token_key = USER_TOKEN + root["uid"].asString();
+	std::string token_value = "";
+	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
+
+	// token验证错误
+	if (!get_token_success) {
+		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
+		std::cerr << "redis get token failed" << std::endl;
+	}
+	if (token_value != root["token"].asString()) {
+		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
+		std::cerr << "token invalid" << std::endl;
+	}
+
+	// token验证成功
+	return_root["error"] = ErrorCodes::SUCCESS;
+
+	int addFriendRes = MysqlManager::getInstance()->addFriendRequest(uid, friend_uid);
+
+	if (addFriendRes == -1) {
+		return_root["error"] = ErrorCodes::ERROR_LOAD_FRIEND_INFO_FAILED;
+		std::cerr << "ERROR add Friend Request Failed" << std::endl;
+		return;
+	}
+	else if (addFriendRes == 0) {
+		return_root["error"] = ErrorCodes::ERROR_FRIEND_EXIST;
+		return_root["friend_uid"] = friend_uid;
+		std::cerr << "ERROR Friend Exists" << std::endl;
+		return;
+	}
+
+	// 添加联系人数组到Json数据中
+	return_root["error"] = ErrorCodes::SUCCESS;
+	return_root["friend_uid"] = friend_uid;
+}
+
+void LogicSystem::addFriendNotificationListHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data)
+{
+	Json::Reader reader;
+	Json::Value root;
+	Json::Value return_root;
+	Defer defer([this, &return_root, session, &msg_id] {
+		std::string return_str = return_root.toStyledString();
+		// 调用session发送消息,消息码 MSG_GET_FRIEND_NOTIFICATION = 1015
+		session->send(return_str, msg_id);
+		});
+
+	if (!reader.parse(msg_data, root)) {
+		std::cout << "parse json failed" << std::endl;
+		return;
+	}
+
+	int uid = root["uid"].asInt();
+	// 验证用户token
+	std::string token_key = USER_TOKEN + root["uid"].asString();
+	std::string token_value = "";
+	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
+
+	// token验证错误
+	if (!get_token_success) {
+		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
+		std::cerr << "redis get token failed" << std::endl;
+	}
+	if (token_value != root["token"].asString()) {
+		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
+		std::cerr << "token invalid" << std::endl;
+	}
+
+	// token验证成功
+	return_root["error"] = ErrorCodes::SUCCESS;
+	
+	// 从MySQL中查询friend_request数据
+	std::unique_ptr<std::vector<AddFriendInfo>> addFriendList = std::make_unique< std::vector<AddFriendInfo>>();
+
+	addFriendList = MysqlManager::getInstance()->getFriendReuqestList(uid);
+
+	// 将vector转化为Json数据
+	return_root["add_friend_list"] = Json::arrayValue;
+
+	// 如果查询结果为空，直接退出。
+	if (addFriendList->empty()) {
+		return;
+	}
+
+	for (const auto& item : *addFriendList) {
+		Json::Value value;
+		value["sender_id"] = item.sender_id;
+		value["receiver_id"] = item.receiver_id;
+		value["avatar"] = item.avatar;
+		value["username"] = item.username;
+		value["nickname"] = item.nickname;
+		value["status"] = item.status;
+		value["request_time"] = item.request_time;
+		return_root["add_friend_list"].append(value);
+	}
 }
 
 std::unique_ptr<std::vector<ContactInfo>> LogicSystem::getContactList(const std::string& token_key, const int& uid) {

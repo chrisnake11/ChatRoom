@@ -42,7 +42,7 @@ public:
 		}
 	}
 
-	static ConfigManager& GetInstance()
+	static ConfigManager& getInstance()
 	{
 		static ConfigManager config_manager;
 		return config_manager;

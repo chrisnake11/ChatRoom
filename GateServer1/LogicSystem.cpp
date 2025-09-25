@@ -78,7 +78,7 @@ LogicSystem::LogicSystem() {
 		std::cout << "email: " << email << std::endl;
 
 		// 使用Grpc，向验证服务器发送请求
-		GetVarifyRsp response = VerifyGrpcClient::GetInstance()->GetVarifyCode(email);
+		GetVarifyRsp response = VerifyGrpcClient::getInstance()->GetVarifyCode(email);
 		root["error"] = response.error();
 
 		// 将结果返回给客户端
@@ -114,7 +114,7 @@ LogicSystem::LogicSystem() {
 
 		// 查询Redis中的验证码
 		std::string varify_code;
-		bool b_get_varify_code = RedisManager::GetInstance()->Get(CODEPREFIX+root["email"].asString(), varify_code);
+		bool b_get_varify_code = RedisManager::getInstance()->Get(CODEPREFIX+root["email"].asString(), varify_code);
 		std::cout << "get varify code: " << CODEPREFIX + root["email"].asString() << " " << varify_code << std::endl;
 		// 查询失败
 		if (!b_get_varify_code) {
@@ -134,7 +134,7 @@ LogicSystem::LogicSystem() {
 		}
 		
 		// MySQL查找用户
-		int uid = MysqlManager::GetInstance()->registerUser(root["name"].asString(), root["email"].asString(), root["passwd"].asString());
+		int uid = MysqlManager::getInstance()->registerUser(root["name"].asString(), root["email"].asString(), root["passwd"].asString());
 
 		// 用户已存在
 		if (uid == 0 || uid == -1) {
@@ -147,7 +147,7 @@ LogicSystem::LogicSystem() {
 
 			
 		// 成功，删除验证码
-		//RedisManager::GetInstance()->Del(CODEPREFIX+root["email"].asString());
+		//RedisManager::getInstance()->Del(CODEPREFIX+root["email"].asString());
 
 		// 返回响应结果
 		response_root["error"] = ErrorCodes::SUCCESS;
@@ -186,7 +186,7 @@ LogicSystem::LogicSystem() {
 
 		// 查询Redis中的验证码
 		std::string varify_code;
-		bool b_get_varify_code = RedisManager::GetInstance()->Get(CODEPREFIX + root["email"].asString(), varify_code);
+		bool b_get_varify_code = RedisManager::getInstance()->Get(CODEPREFIX + root["email"].asString(), varify_code);
 		std::cout << "get varify code: " << CODEPREFIX + root["email"].asString() << " " << varify_code << std::endl;
 		// 查询失败
 		if (!b_get_varify_code) {
@@ -206,7 +206,7 @@ LogicSystem::LogicSystem() {
 		}
 
 		// MySQL search email and reset password
-		int uid = MysqlManager::GetInstance()->resetUserPasswd(root["email"].asString(), root["passwd"].asString());
+		int uid = MysqlManager::getInstance()->resetUserPasswd(root["email"].asString(), root["passwd"].asString());
 
 		// email not exists
 		if (uid == 0 || uid == -1) {
@@ -219,7 +219,7 @@ LogicSystem::LogicSystem() {
 
 
 		// 成功，删除验证码
-		//RedisManager::GetInstance()->Del(CODEPREFIX+root["email"].asString());
+		//RedisManager::getInstance()->Del(CODEPREFIX+root["email"].asString());
 
 		// 返回响应结果
 		response_root["error"] = ErrorCodes::SUCCESS;
@@ -261,7 +261,7 @@ LogicSystem::LogicSystem() {
 		UserInfo user_info;
 		
 		// 验证密码
-		bool passwd_valid = MysqlManager::GetInstance()->checkNameAndPasswd(name, passwd, user_info);
+		bool passwd_valid = MysqlManager::getInstance()->checkNameAndPasswd(name, passwd, user_info);
 		if (!passwd_valid) {
 			std::cout << "passwd wrong" << std::endl;
 			root["error"] = ErrorCodes::ERROR_PASSWORD_WRONG;
@@ -271,7 +271,7 @@ LogicSystem::LogicSystem() {
 		}
 
 		// 获取用户状态
-		auto reply = StatusGrpcClient::GetInstance()->GetChatServer(user_info.uid);
+		auto reply = StatusGrpcClient::getInstance()->GetChatServer(user_info.uid);
 		// 打印日志
 		std::cout << "get status reply is: " 
 			<< reply.host() << ", " 

@@ -39,6 +39,12 @@ private:
 	void chatMessageListHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
 	// 获取联系人列表
 	void contactListHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
+	// 搜索联系人列表
+	void searchFriendHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
+	// 处理添加好友请求
+	void addFriendRequestHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
+	// 获取好友通知列表
+	void addFriendNotificationListHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
 
 
 	// 获取消息列表
