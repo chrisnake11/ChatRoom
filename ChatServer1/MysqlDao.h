@@ -38,6 +38,15 @@ public:
     // 更新好友关系
     int updateFriendRelationship(std::unique_ptr<FriendRelationship> fr, sql::Connection* conn);
 
+    // 同意好友请求
+    int acceptFriendRequest(const int& sender_id, const int& receiver_id, sql::Connection* conn);
+
+    // 拒绝好友请求
+    int rejectFriendRequest(const int& sender_id, const int& receiver_id, sql::Connection* conn);
+
+    // 添加好友关系
+    int addFriendRelationship(const int& sender_id, const int& receiver_id, sql::Connection* conn);
+
 	std::unique_ptr<std::vector<SearchFriendInfo>> searchFriendList(const std::string& friend_name, sql::Connection* conn);
 
 	bool existFriendRequest(const int& uid, const int& friend_uid, sql::Connection* conn);

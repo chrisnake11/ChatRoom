@@ -1,5 +1,5 @@
 #include "MysqlManager.h"
-
+#include <exception>
 
 MysqlPool::MysqlPool(const std::string& url, const std::string& user, const std::string& passwd,
     const std::string& schema, std::size_t pool_size)
@@ -323,6 +323,12 @@ std::unique_ptr<std::vector<SearchFriendInfo>> MysqlManager::searchFriendList(co
     try {
         return _dao.searchFriendList(friend_name, conn->_con.get());
     }
+    catch (sql::SQLException& e) {
+        std::cerr << "SQL Error in searchFriendList: " << e.what()
+            << " (MySQL error code: " << e.getErrorCode()
+            << ", SQLState: " << e.getSQLState() << ")" << std::endl;
+        return nullptr;  // 返回错误码
+    }
     catch (std::exception& e) {
         std::cerr << "search friend list by friend_name failed: " << e.what() << std::endl;
         return nullptr;
@@ -343,12 +349,17 @@ int MysqlManager::addFriendRequest(const int& uid, const int& friend_uid)
         bool isExist = _dao.existFriendRequest(uid, friend_uid, conn->_con.get());
 		// 已存在，返回0
         if (isExist) {
-            std::cerr << "friend request is exist" << std::endl;
-            return 0;
+            throw std::runtime_error("friend request is exist");
 		}
 		return _dao.insertFriendRequest(uid, friend_uid, conn->_con.get());
     }
     // 失败返回-1
+    catch (sql::SQLException& e) {
+        std::cerr << "SQL Error in addFriendRequest: " << e.what()
+            << " (MySQL error code: " << e.getErrorCode()
+            << ", SQLState: " << e.getSQLState() << ")" << std::endl;
+        return -1;  // 返回错误码
+    }
     catch (std::exception& e) {
         std::cerr << "search friend list by friend_name failed: " << e.what() << std::endl;
         return -1;
@@ -367,6 +378,8 @@ std::unique_ptr<std::vector<AddFriendInfo>> MysqlManager::getFriendReuqestList(c
         _pool->returnConnection(std::move(conn));
         });
     try {
+        conn->_con->setAutoCommit(false); // 开启事务
+
         // 查询自己发送的请求
         std::unique_ptr<std::vector<AddFriendInfo>> requestList = _dao.getFriendRequestList(uid, conn->_con.get());
         // 查询收到的请求
@@ -393,11 +406,105 @@ std::unique_ptr<std::vector<AddFriendInfo>> MysqlManager::getFriendReuqestList(c
             return lhs.request_time > rhs.request_time;
             });
 
+        // 提交事务
+        conn->_con->commit();
+        conn->_con->setAutoCommit(true);
+
+
         return addFriendList;
     }
     // 失败
+    catch (sql::SQLException& e) {
+        conn->_con->rollback();
+        std::cerr << "SQL Error in getFriendReuqestList: " << e.what()
+            << " (MySQL error code: " << e.getErrorCode()
+            << ", SQLState: " << e.getSQLState() << ")" << std::endl;
+        return addFriendList;  // 返回错误码
+    }
     catch (std::exception& e) {
         std::cerr << "search friend list by friend_name failed: " << e.what() << std::endl;
         return addFriendList;
     }
 }
+
+int MysqlManager::acceptFriendRequest(const int& sender_id, const int& receiver_id)
+{
+    int res = -1;
+    auto conn = _pool->getConnection();
+    if (!conn) {
+        std::cerr << "get mysql connection failed" << std::endl;
+        return res;
+    }
+    Defer defer([this, &conn]() {
+        _pool->returnConnection(std::move(conn));
+        });
+    try {
+        conn->_con->setAutoCommit(false);
+        // request是否存在
+        if (!_dao.existFriendRequest(sender_id, receiver_id, conn->_con.get())) {
+            throw std::runtime_error("accept friend request not exist!");
+        }
+
+        // 同意好友请求
+        int res = _dao.acceptFriendRequest(sender_id, receiver_id, conn->_con.get());
+        if (res >= 0) {
+            // 添加信息到好友关系列表
+            _dao.addFriendRelationship(sender_id, receiver_id, conn->_con.get());
+        }
+        conn->_con->commit();
+        conn->_con->setAutoCommit(true);
+        return res;
+    }
+    catch (sql::SQLException& e) {
+        conn->_con->rollback();
+        std::cerr << "SQL Error in acceptFriendRequest: " << e.what()
+            << " (MySQL error code: " << e.getErrorCode()
+            << ", SQLState: " << e.getSQLState() << ")" << std::endl;
+        return -1;  // 返回错误码
+    }
+    catch (const std::exception& e) {
+        std::cerr << "update accept friend request failed: " << e.what() << std::endl;
+        return -1;
+    }
+
+}
+
+int MysqlManager::rejectFriendRequest(const int& sender_id, const int& receiver_id)
+{
+    int res = -1;
+    auto conn = _pool->getConnection();
+    if (!conn) {
+        std::cerr << "get mysql connection failed" << std::endl;
+        return res;
+    }
+    Defer defer([this, &conn]() {
+        _pool->returnConnection(std::move(conn));
+        });
+    try {
+        conn->_con->setAutoCommit(false);
+        // request是否存在
+        if (!_dao.existFriendRequest(sender_id, receiver_id, conn->_con.get())) {
+            throw std::runtime_error("accept friend request not exist!");
+        }
+        
+        // update reject 状态信息
+        int res = _dao.rejectFriendRequest(sender_id, receiver_id, conn->_con.get());
+        
+        conn->_con->commit();
+        conn->_con->setAutoCommit(true);
+
+        return res;
+    }
+    catch (sql::SQLException& e) {
+        std::cerr << "SQL Error in rejectFriendRequest: " << e.what()
+            << " (MySQL error code: " << e.getErrorCode()
+            << ", SQLState: " << e.getSQLState() << ")" << std::endl;
+        return res;  // 返回错误码
+    }
+    catch (const std::exception& e) {
+        std::cerr << "update accept friend request failed: " << e.what() << std::endl;
+        return res;
+    }
+
+}
+

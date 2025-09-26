@@ -46,6 +46,10 @@ private:
 	// 获取好友通知列表
 	void addFriendNotificationListHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
 
+	// 同意好友请求
+	void acceptFriendRequest(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
+	// 拒绝好友请求
+	void rejectFriendRequest(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data);
 
 	// 获取消息列表
 	std::unique_ptr<std::vector<MessageInfo>> getMessageList(std::string list_key, int uid);
@@ -58,7 +62,11 @@ private:
 	// base_key为redis_key
 	std::unique_ptr<UserInfo> getUserInfo(std::string base_key, int uid);
 
-	// 
+	// Token验证, uid_str用于表示root节点中uid对应的key_str，解析uid_str字符串。
+	// std::string uid_str = root[uid_str].asString();
+	bool validateToken(Json::Reader& reader, Json::Value& root, Json::Value& return_root, const std::string& msg_data);
+
+
 	bool _b_stop;
 
 	// 单线程处理消息节点。

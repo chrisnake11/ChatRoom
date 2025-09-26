@@ -40,6 +40,7 @@ enum ErrorCodes {
 	ERROR_LOAD_FRIEND_INFO_FAILED = 1013, // 加载好友信息失败
 	ERROR_GRPC_SEND_MESSAGE_ERROR = 1014, // grpc发送消息失败
 	ERROR_FRIEND_EXIST = 1015, // 好友已存在
+
 };
 
 // 验证码redis前缀
@@ -100,6 +101,8 @@ enum MSG_ID {
 	MSG_SEARCH_FRIEND_LIST = 1013, // 搜索好友列表
 	MSG_ADD_FRIEND_REQUEST = 1014, // 添加好友请求
 	MSG_GET_FRIEND_NOTIFICATION = 1015, // 获取好友通知列表
+	MSG_ACCEPT_FRIEND_REQUEST = 1016, // 同意好友请求
+	MSG_REJECT_FRIEND_REQUEST = 1017, // 拒绝好友请求
 };
 
 // redis前缀 key

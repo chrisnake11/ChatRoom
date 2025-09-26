@@ -86,7 +86,10 @@ public:
     // 查询添加好友请求列表 
     std::unique_ptr<std::vector<AddFriendInfo>> getFriendReuqestList(const int& uid);
 
-
+    // 同意好友请求
+    int acceptFriendRequest(const int& sender_id, const int& receiver_id);
+    // 更新好友请求
+    int rejectFriendRequest(const int& sender_id, const int& receiver_id);
 private:
 	MysqlManager();
 	MysqlDao _dao;

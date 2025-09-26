@@ -206,13 +206,50 @@ int MysqlDao::updateFriendRelationship(std::unique_ptr<FriendRelationship> fr, s
         "SET friend_status = ? create_time = ? last_message_id = ?, unread_count = ? "
         "WHERE uid_min = ? AND uid_max = ? ";
     std::unique_ptr<sql::PreparedStatement> pstmt(
-        conn->prepareStatement("UPDATE friend_relationship SET friend_status = ? create_time = ? last_message_id = ? unread_count = ? WHERE uid_min = ? AND uid_max = ?"));
+        conn->prepareStatement(query_str));
     pstmt->setInt(1, fr->friend_status);
     pstmt->setString(2, fr->create_time);      // 假设是 string
     pstmt->setInt(3, fr->last_message_id);
     pstmt->setInt(4, fr->unread_count);
     pstmt->setInt(5, std::min(fr->uid, fr->friend_uid));
     pstmt->setInt(6, std::max(fr->uid, fr->friend_uid));
+    return pstmt->executeUpdate();
+}
+
+int MysqlDao::acceptFriendRequest(const int& sender_id, const int& receiver_id, sql::Connection* conn)
+{
+    std::string query_str = "UPDATE friend_request "
+        "SET Status = 1 "
+        "WHERE sender_id = ? AND receiver_id = ?;";
+    std::unique_ptr<sql::PreparedStatement> pstmt(
+        conn->prepareStatement(query_str));
+    pstmt->setInt(1, sender_id);
+    pstmt->setInt(2, receiver_id);
+    return pstmt->executeUpdate();
+}
+
+int MysqlDao::rejectFriendRequest(const int& sender_id, const int& receiver_id, sql::Connection* conn)
+{
+    std::string query_str = "UPDATE friend_request "
+        "SET Status = 2 "
+        "WHERE sender_id = ? AND receiver_id = ?;";
+    std::unique_ptr<sql::PreparedStatement> pstmt(
+        conn->prepareStatement(query_str));
+    pstmt->setInt(1, sender_id);
+    pstmt->setInt(2, receiver_id);
+    return pstmt->executeUpdate();
+}
+
+int MysqlDao::addFriendRelationship(const int& sender_id, const int& receiver_id, sql::Connection* conn)
+{
+    std::string query_str = "INSERT INTO friend_relationship "
+        "(user_id, friend_id, friend_status) "
+        "VALUES (?, ?, ?);";
+    std::unique_ptr<sql::PreparedStatement> pstmt(
+        conn->prepareStatement(query_str));
+    pstmt->setInt(1, sender_id);
+    pstmt->setInt(2, receiver_id);
+    pstmt->setInt(3, 0);
     return pstmt->executeUpdate();
 }
 

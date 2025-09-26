@@ -89,6 +89,12 @@ void LogicSystem::registerHandler()
 	_handlers[MSG_ID::MSG_SEARCH_FRIEND_LIST] = std::bind(&LogicSystem::searchFriendHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 	_handlers[MSG_ID::MSG_ADD_FRIEND_REQUEST] = std::bind(&LogicSystem::addFriendRequestHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
 	_handlers[MSG_ID::MSG_GET_FRIEND_NOTIFICATION] = std::bind(&LogicSystem::addFriendNotificationListHandler, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+	_handlers[MSG_ID::MSG_ACCEPT_FRIEND_REQUEST] = std::bind(
+		&LogicSystem::acceptFriendRequest, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3
+	);
+	_handlers[MSG_ID::MSG_REJECT_FRIEND_REQUEST] = std::bind(
+		&LogicSystem::acceptFriendRequest, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3
+	);
 }
 
 void LogicSystem::sendChatMessageHandler(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data) {
@@ -102,28 +108,12 @@ void LogicSystem::sendChatMessageHandler(std::shared_ptr<CSession> session, cons
 		session->send(return_str, msg_id);
 		});
 
-    if (!reader.parse(msg_data, root)) {
-		std::cout << "parse json failed" << std::endl;
+	if (validateToken(reader, root, return_root, msg_data) == false) {
 		return;
-	}
-    
-	int uid = root["uid"].asInt();
-	// 验证用户token
-	std::string token_key = USER_TOKEN + root["uid"].asString();
-	std::string token_value = "";
-	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
-
-	// token验证错误
-	if (!get_token_success) {
-		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
-		std::cerr << "redis get token failed" << std::endl;
-	}
-	if (token_value != root["token"].asString()) {
-		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
-		std::cerr << "token invalid" << std::endl;
 	}
 
 	// 获取消息信息，插入数据库
+	int uid = root["uid"].asInt();
 	int friend_uid = root["friend_uid"].asInt();
 	std::string message = root["message"].asString();
 	std::string message_time = root["message_time"].asString();
@@ -194,30 +184,13 @@ void LogicSystem::chatMessageListHandler(std::shared_ptr<CSession> session, cons
 		session->send(return_str, msg_id);
 		});
 
-	if (!reader.parse(msg_data, root)) {
-		std::cout << "parse json failed" << std::endl;
+	if (validateToken(reader, root, return_root, msg_data) == false) {
 		return;
-	}
-	std::cout << "get chat message list request " << std::endl;
-
-	int uid = root["uid"].asInt();
-	// 验证用户token
-	std::string token_key = USER_TOKEN + root["uid"].asString();
-	std::string token_value = "";
-	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
-
-	// token验证错误
-	if (!get_token_success) {
-		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
-		std::cerr << "redis get token failed" << std::endl;
-	}
-	if (token_value != root["token"].asString()) {
-		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
-		std::cerr << "token invalid" << std::endl;
 	}
 
 	// 获取聊天消息列表
-	return_root["error"] = ErrorCodes::SUCCESS;
+	std::cout << "get chat message list request " << std::endl;
+	int uid = root["uid"].asInt();
 	int friend_uid = root["friend_uid"].asInt();
 	std::string list_key = USER_CHAT_MESSAGE + root["uid"].asString() + "_" + std::to_string(friend_uid);
 	std::unique_ptr<std::vector<ChatMessageInfo>> message_list = getChatMessageList(list_key, uid, friend_uid);
@@ -325,30 +298,12 @@ void LogicSystem::contactListHandler(std::shared_ptr<CSession> session, const sh
 		session->send(return_str, msg_id);
 		});
 
-	if (!reader.parse(msg_data, root)) {
-		std::cout << "parse json failed" << std::endl;
+	if (validateToken(reader, root, return_root, msg_data) == false) {
 		return;
 	}
-	std::cout << "get contact list request " << std::endl;
 
 	int uid = root["uid"].asInt();
-	// 验证用户token
-	std::string token_key = USER_TOKEN + root["uid"].asString();
-	std::string token_value = "";
-	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
-
-	// token验证错误
-	if (!get_token_success) {
-		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
-		std::cerr << "redis get token failed" << std::endl;
-	}
-	if (token_value != root["token"].asString()) {
-		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
-		std::cerr << "token invalid" << std::endl;
-	}
-
-	// token验证成功
-	return_root["error"] = ErrorCodes::SUCCESS;
+	std::cout << "get contact list request " << std::endl;
 	std::string list_key = USER_CONTACT_LIST + root["uid"].asString();
 	std::unique_ptr<std::vector<ContactInfo>> contact_list = getContactList(list_key, uid);
 
@@ -385,34 +340,15 @@ void LogicSystem::searchFriendHandler(std::shared_ptr<CSession> session, const s
 		session->send(return_str, msg_id);
 		});
 
-	if (!reader.parse(msg_data, root)) {
-		std::cout << "parse json failed" << std::endl;
+	if (validateToken(reader, root, return_root, msg_data) == false) {
 		return;
 	}
+
+	int uid = root["uid"].asInt();
 
 	std::string friend_name = root["friend_name"].asString();
 
 	std::cout << "receivec search friend request for " << friend_name << std::endl;
-
-	int uid = root["uid"].asInt();
-	// 验证用户token
-	std::string token_key = USER_TOKEN + root["uid"].asString();
-	std::string token_value = "";
-	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
-
-	// token验证错误
-	if (!get_token_success) {
-		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
-		std::cerr << "redis get token failed" << std::endl;
-	}
-	if (token_value != root["token"].asString()) {
-		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
-		std::cerr << "token invalid" << std::endl;
-	}
-
-	// token验证成功
-	return_root["error"] = ErrorCodes::SUCCESS;
-
 	std::unique_ptr<std::vector<SearchFriendInfo>> search_list = MysqlManager::getInstance()->searchFriendList(friend_name);
 
 	if(search_list == nullptr) {
@@ -440,12 +376,11 @@ void LogicSystem::addFriendRequestHandler(std::shared_ptr<CSession> session, con
 	Json::Value return_root;
 	Defer defer([this, &return_root, session, &msg_id] {
 		std::string return_str = return_root.toStyledString();
-		// 调用session发送消息,消息码 MSG_SEARCH_FRIEND_LIST = 1013
+		// 调用session发送消息,消息码 MSG_ADD_FRIEND_REQUEST = 1014
 		session->send(return_str, msg_id);
 		});
 
-	if (!reader.parse(msg_data, root)) {
-		std::cout << "parse json failed" << std::endl;
+	if (validateToken(reader, root, return_root, msg_data) == false) {
 		return;
 	}
 
@@ -454,23 +389,6 @@ void LogicSystem::addFriendRequestHandler(std::shared_ptr<CSession> session, con
 	std::cout << "receivec add friend request for " << friend_uid << std::endl;
 
 	int uid = root["uid"].asInt();
-	// 验证用户token
-	std::string token_key = USER_TOKEN + root["uid"].asString();
-	std::string token_value = "";
-	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
-
-	// token验证错误
-	if (!get_token_success) {
-		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
-		std::cerr << "redis get token failed" << std::endl;
-	}
-	if (token_value != root["token"].asString()) {
-		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
-		std::cerr << "token invalid" << std::endl;
-	}
-
-	// token验证成功
-	return_root["error"] = ErrorCodes::SUCCESS;
 
 	int addFriendRes = MysqlManager::getInstance()->addFriendRequest(uid, friend_uid);
 
@@ -502,30 +420,12 @@ void LogicSystem::addFriendNotificationListHandler(std::shared_ptr<CSession> ses
 		session->send(return_str, msg_id);
 		});
 
-	if (!reader.parse(msg_data, root)) {
-		std::cout << "parse json failed" << std::endl;
+
+	if (validateToken(reader, root, return_root, msg_data) == false) {
 		return;
 	}
-
-	int uid = root["uid"].asInt();
-	// 验证用户token
-	std::string token_key = USER_TOKEN + root["uid"].asString();
-	std::string token_value = "";
-	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
-
-	// token验证错误
-	if (!get_token_success) {
-		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
-		std::cerr << "redis get token failed" << std::endl;
-	}
-	if (token_value != root["token"].asString()) {
-		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
-		std::cerr << "token invalid" << std::endl;
-	}
-
-	// token验证成功
-	return_root["error"] = ErrorCodes::SUCCESS;
 	
+	int uid = root["uid"].asInt();
 	// 从MySQL中查询friend_request数据
 	std::unique_ptr<std::vector<AddFriendInfo>> addFriendList = std::make_unique< std::vector<AddFriendInfo>>();
 
@@ -550,6 +450,92 @@ void LogicSystem::addFriendNotificationListHandler(std::shared_ptr<CSession> ses
 		value["request_time"] = item.request_time;
 		return_root["add_friend_list"].append(value);
 	}
+}
+
+void LogicSystem::acceptFriendRequest(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data)
+{
+	Json::Reader reader;
+	Json::Value root;
+	Json::Value return_root;
+	Defer defer([this, &return_root, session, &msg_id] {
+		std::string return_str = return_root.toStyledString();
+		// 调用session发送消息,消息码 MSG_ACCEPT_FRIEND_REQUEST = 1016
+		session->send(return_str, msg_id);
+		});
+
+	if (validateToken(reader, root, return_root, msg_data) == false) {
+		return;
+	}
+
+	int sender_id = root["sender_id"].asInt();
+	int receiver_id = root["receiver_id"].asInt();
+
+	// 更新结果
+	int mysql_res = MysqlManager::getInstance()->acceptFriendRequest(sender_id, receiver_id);
+	
+	// MySQL更新失败
+	if (mysql_res == -1) {
+		// 不进行处理
+		return_root["ERROR"] = ErrorCodes::ERROR_FRIEND_EXIST;
+		return;
+	}
+	// 已经同意
+	else if (mysql_res == 0) {
+		// 不进行处理
+		return_root["ERROR"] = ErrorCodes::ERROR_FRIEND_EXIST;
+		return;
+	}
+	
+	// 成功
+	return_root["ERROR"] = ErrorCodes::SUCCESS;
+
+	// receiver_id表示接收好友请求的人
+	// 也就是发起请求的客户端用户
+	return_root["sender_id"] = sender_id;
+	return_root["receiver_id"] = receiver_id;
+}
+
+void LogicSystem::rejectFriendRequest(std::shared_ptr<CSession> session, const short& msg_id, const std::string& msg_data)
+{
+	Json::Reader reader;
+	Json::Value root;
+	Json::Value return_root;
+	Defer defer([this, &return_root, session, &msg_id] {
+		std::string return_str = return_root.toStyledString();
+		// 调用session发送消息,消息码 MSG_REJECT_FRIEND_REQUEST = 1017
+		session->send(return_str, msg_id);
+		});
+
+	if (validateToken(reader, root, return_root, msg_data) == false) {
+		return;
+	}
+
+	int sender_id = root["sender_id"].asInt();
+	int receiver_id = root["receiver_id"].asInt();
+
+	// 更新结果
+	int mysql_res = MysqlManager::getInstance()->rejectFriendRequest(sender_id, receiver_id);
+
+	// MySQL更新失败
+	if (mysql_res == -1) {
+		// 不进行处理
+		return_root["ERROR"] = ErrorCodes::ERROR_FRIEND_EXIST;
+		return;
+	}
+	// 已经同意
+	else if (mysql_res == 0) {
+		// 不进行处理
+		return_root["ERROR"] = ErrorCodes::ERROR_FRIEND_EXIST;
+		return;
+	}
+
+	// 成功
+	return_root["ERROR"] = ErrorCodes::SUCCESS;
+
+	// receiver_id表示接收好友请求的人
+	// 也就是发起请求的客户端用户
+	return_root["sender_id"] = sender_id;
+	return_root["receiver_id"] = receiver_id;
 }
 
 std::unique_ptr<std::vector<ContactInfo>> LogicSystem::getContactList(const std::string& token_key, const int& uid) {
@@ -610,30 +596,12 @@ void LogicSystem::messageListHandler(std::shared_ptr<CSession> session, const sh
 		session->send(return_str, msg_id);
 		});
 
-    if (!reader.parse(msg_data, root)) {
-		std::cout << "parse json failed" << std::endl;
+	if (validateToken(reader, root, return_root, msg_data) == false) {
 		return;
 	}
-	std::cout << "get message list request " << std::endl;
-	
+
 	int uid = root["uid"].asInt();
-	// 验证用户token
-	std::string token_key = USER_TOKEN + root["uid"].asString();
-	std::string token_value = "";
-	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
-
-	// token验证错误
-	if (!get_token_success) {
-		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
-		std::cerr << "redis get token failed" << std::endl;
-	}
-	if (token_value != root["token"].asString()) {
-		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
-		std::cerr << "token invalid" << std::endl;
-	}
-
-	// token验证成功
-	return_root["error"] = ErrorCodes::SUCCESS;
+	std::cout << "get message list request " << std::endl;
 
 	// 从redis中获取列表信息
     std::string list_key = USER_MESSAGE_LIST + std::to_string(uid);
@@ -839,5 +807,33 @@ std::unique_ptr<UserInfo> LogicSystem::getUserInfo(std::string base_key, int uid
 		RedisManager::getInstance()->Set(base_key, root.toStyledString());
 		return user_info;
 	}
+}
+
+bool LogicSystem::validateToken(Json::Reader& reader, Json::Value& root, Json::Value& return_root, const std::string& msg_data)
+{
+	if (!reader.parse(msg_data, root)) {
+		std::cout << "Json data parse failed" << std::endl;
+		return false;
+	}
+	// 验证用户token
+	std::string token_key = USER_TOKEN + root["uid"].asString();
+	std::string token_value = "";
+	bool get_token_success = RedisManager::getInstance()->Get(token_key, token_value);
+
+	// token验证错误
+	if (!get_token_success) {
+		return_root["error"] = ErrorCodes::ERROR_UID_INVALID;
+		std::cerr << "redis get token failed" << std::endl;
+		return false;
+	}
+	if (token_value != root["token"].asString()) {
+		return_root["error"] = ErrorCodes::ERROR_TOKEN_INVALID;
+		std::cerr << "token invalid" << std::endl;
+		return false;
+	}
+
+	// token验证成功
+	return_root["error"] = ErrorCodes::SUCCESS;
+	return true;
 }
 
